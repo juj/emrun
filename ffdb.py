@@ -285,13 +285,13 @@ def b2g_install(target_app_path):
       percentage_done = bytes_uploaded * 1.0 / file_size
       total_time = secs_elapsed / percentage_done
       time_left = total_time - secs_elapsed
-      print sizeof_fmt(bytes_uploaded) + " uploaded, {:5.1f} % done.".format(percentage_done*100.0) + ' Elapsed: ' + str(int(secs_elapsed)) + ' seconds. Time left: ' + str(datetime.timedelta(seconds=int(time_left))) + '. Data rate: {:5.2f} KB/second.'.format(bytes_uploaded / 1024.0 / secs_elapsed)
+      print sizeof_fmt(bytes_uploaded) + " uploaded, %.9f %% done." % (percentage_done*100.0) + ' Elapsed: ' + str(int(secs_elapsed)) + ' seconds. Time left: ' + str(datetime.timedelta(seconds=int(time_left))) + '. Data rate: %.2f KB/second.' % (bytes_uploaded / 1024.0 / secs_elapsed)
 
   app_local_id = str(uuid.uuid4())
   reply = send_b2g_cmd(webappsActorName, 'install', { 'appId': app_local_id, 'upload': packageUploadActor })
   cur_time = time.time()
   secs_elapsed = cur_time - start_time
-  print 'Upload of ' + sizeof_fmt(file_size) + ' finished. Total time elapsed: ' + str(int(secs_elapsed)) + ' seconds. Data rate: {:5.2f} KB/second.'.format(file_size / 1024.0 / secs_elapsed)
+  print 'Upload of ' + sizeof_fmt(file_size) + ' finished. Total time elapsed: ' + str(int(secs_elapsed)) + ' seconds. Data rate:  %.2f KB/second.' % (file_size / 1024.0 / secs_elapsed)
   if not 'appId' in reply:
     print 'Error: Application install failed! ' + str(reply)
     sys.exit()
