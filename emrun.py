@@ -274,6 +274,8 @@ class HTTPWebServer(SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServer):
         if not have_received_messages:
           emrun_options.serve_after_close = True
           logv('Warning: emrun got detached from the target browser process. Cannot detect when user closes the browser. Behaving as if --serve_after_close was passed in.')
+          if not emrun_options.browser:
+            logv('Try passing the --browser=/path/to/browser option to avoid this from occurring. See https://github.com/kripken/emscripten/issues/3234 for more discussion.')
         else:
           self.shutdown()
           logv('Browser process has quit. Shutting down web server.. Pass --serve_after_close to keep serving the page even after the browser closes.')
@@ -853,7 +855,7 @@ def main():
     help='If true, any previously running instances of the target browser are killed before starting.')
 
   parser.add_option('--kill_exit', dest='kill_on_exit', action='store_true', default=False,
-    help='If true, the spawned browser process is forcibly killed when it calls exit().')
+    help='If true, the spawned browser process is forcibly killed when it calls exit(). Note: Using this option may require explicitly passing the option --browser=/path/to/browser, to avoid emrun being detached from the browser process it spawns.')
 
   parser.add_option('--no_server', dest='no_server', action='store_true', default=False,
     help='If specified, a HTTP web server is not launched to host the page to run.')
@@ -1101,6 +1103,8 @@ def main():
   if browser_process and browser_process.poll() == None:
     options.serve_after_close = True
     logv('Warning: emrun got detached from the target browser process. Cannot detect when user closes the browser. Behaving as if --serve_after_close was passed in.')
+    if not options.browser:
+      logv('Try passing the --browser=/path/to/browser option to avoid this from occurring. See https://github.com/kripken/emscripten/issues/3234 for more discussion.')
   
   if not options.no_server:
     try:
