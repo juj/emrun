@@ -206,16 +206,15 @@ user_pref("app.update.silent", false);
 user_pref("app.update.mode", 0);
 user_pref("app.update.service.enabled", false);
 // Don't check compatibility with add-ons, or (auto)update them
-clearPref("extensions.lastAppVersion"); 
-lockPref("plugins.hide_infobar_for_outdated_plugin", true);
-clearPref("plugins.update.url");
+user_pref("extensions.lastAppVersion", '');
+user_pref("plugins.hide_infobar_for_outdated_plugin", true);
+user_pref("plugins.update.url", '');
 // Disable health reporter
-lockPref("datareporting.healthreport.service.enabled", false);
+user_pref("datareporting.healthreport.service.enabled", false);
 // Disable crash reporter
-lockPref("toolkit.crashreporter.enabled", false);
-Components.classes["@mozilla.org/toolkit/crash-reporter;1"].getService(Components.interfaces.nsICrashReporter).submitReports = false; 
+user_pref("toolkit.crashreporter.enabled", false);
 // Don't show WhatsNew on first run after every update
-pref("browser.startup.homepage_override.mstone","ignore");
+user_pref("browser.startup.homepage_override.mstone","ignore");
 // Don't show 'know your rights' and a bunch of other nag windows at startup
 user_pref("browser.rights.3.shown", true);
 user_pref('devtools.devedition.promo.shown', true);
@@ -1175,7 +1174,7 @@ def main():
 
   # Create temporary Firefox profile to run the page with. This is important to run after kill_browser_process()/kill_on_start op above, since that
   # cleans up the temporary profile if one exists.
-  if processname_killed_atexit == 'firefox' and options.safe_firefox_profile:
+  if processname_killed_atexit == 'firefox' and options.safe_firefox_profile and not options.no_browser:
     profile_dir = create_emrun_safe_firefox_profile()
     browser += ['-no-remote', '-profile', profile_dir.replace('\\', '/')]
 
@@ -1244,12 +1243,23 @@ def main():
   if not options.no_browser:
     if options.kill_on_exit:
       kill_browser_process()
-    elif is_browser_process_alive():
-      logv('Not terminating browser process, pass --kill_exit to terminate the browser when it calls exit().')
+    else:
+      if is_browser_process_alive():
+        logv('Not terminating browser process, pass --kill_exit to terminate the browser when it calls exit().')
+      # If we have created a temporary Firefox profile, we would really really like to wait until the browser closes,
+      # or otherwise we'll just have to litter temp files and keep the temporary profile alive. It is possible here
+      # that the browser is cooperatively shutting down, but has not yet had time to do so, so wait for a short while.
+      if temp_firefox_profile_dir != None: time.sleep(3)
+
+    if not is_browser_process_alive():
+      # Browser is no longer running, make sure to clean up the temp Firefox profile, if we created one.
+      delete_emrun_safe_firefox_profile()
 
   return page_exit_code
 
 if __name__ == '__main__':
   returncode = main()
   logv('emrun quitting with process exit code ' + str(returncode))
+  if temp_firefox_profile_dir != None:
+    logi('Warning: Had to leave behind a temporary Firefox profile directory ' + temp_firefox_profile_dir + ' because --safe_firefox_profile was set and the browser did not quit before emrun did.')
   sys.exit(returncode)
