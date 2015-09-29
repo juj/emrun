@@ -243,6 +243,10 @@ user_pref("extensions.getAddons.cache.lastUpdate", 4102437600);
 user_pref("media.gmp-eme-adobe.lastUpdate", 4102437600);
 user_pref("media.gmp-gmpopenh264.lastUpdate", 4102437600);
 user_pref("datareporting.healthreport.nextDataSubmissionTime", 4102437600439);
+// Detect directly when executing if asm.js does not validate by throwing an error.
+user_pref("javascript.options.throw_on_asmjs_validation_failure", true);
+// Throw errors on all JS engine warnings for "strict" mode execution.
+user_pref("javascript.options.werror", true);
 ''')
   f.close()
   logv('create_emrun_safe_firefox_profile: Created new Firefox profile "' + temp_firefox_profile_dir + '"')
