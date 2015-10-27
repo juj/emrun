@@ -9,6 +9,7 @@ if WINDOWS:
 
 LOG_FORMAT = 'short' # Either 'bare', 'short', or 'long'
 ADB = 'adb'          # Path to the adb executable
+ADB_DEVICE = ['-d']  # Parameters that tell ADB which USB device to talk to. This is either '-d' (talk to the only found device. Default), or ['-s', 'deviceid'] for given device.
 LOG_VERBOSE = False  # Verbose printing enabled with --verbose
 HOST = 'localhost'   # The remote host to connect to the B2G device
 PORT = 6000          # The port on the host on which the B2G device listens on
@@ -60,7 +61,9 @@ def format_html(msg):
 # Prints a verbose log message to stdout channel. Only shown if run with --verbose.
 def logv(msg):
   if LOG_VERBOSE:
-    sys.stdout.write(format_html(msg) + '\n')
+    if not msg.endswith('\n'):
+      msg += '\n'
+    sys.stdout.write(msg)
     sys.stdout.flush()
 
 # Reads data from the socket, and tries to parse what we have got so far as a JSON message.
@@ -175,18 +178,19 @@ def print_applist(applist, running_app_manifests, print_removable):
 
 def adb_devices():
   try:
-    devices = subprocess.check_output([ADB, 'devices'])
+    devices = check_output([ADB, 'devices'])
     devices = devices.strip().split('\n')[1:]
+    devices = filter(lambda x: 'device' in x, devices)
     devices = map(lambda x: x.strip().split('\t'), devices)
     return devices
   except Exception, e:
     return []
 
 def b2g_get_prefs_filename():
-  return subprocess.check_output([ADB, 'shell', 'echo', '-n', '/data/b2g/mozilla/*.default/prefs.js'])
+  return check_output([ADB] + ADB_DEVICE + ['shell', 'echo', '-n', '/data/b2g/mozilla/*.default/prefs.js'])
 
 def b2g_get_prefs_data():
-  return subprocess.check_output([ADB, 'shell', 'cat', '/data/b2g/mozilla/*.default/prefs.js'])
+  return check_output([ADB] + ADB_DEVICE + ['shell', 'cat', '/data/b2g/mozilla/*.default/prefs.js'])
 
 def b2g_get_pref(sub):
   prefs_data = b2g_get_prefs_data().split('\n')
@@ -216,9 +220,9 @@ def b2g_set_pref(pref, value):
   os.write(oshandle, '\n'.join(new_prefs_data));
 
   # Write the new pref
-  subprocess.check_output([ADB, 'shell', 'stop', 'b2g'])
-  subprocess.check_output([ADB, 'push', tempfilename, b2g_get_prefs_filename()])
-  subprocess.check_output([ADB, 'shell', 'start', 'b2g'])
+  check_output([ADB] + ADB_DEVICE + ['shell', 'stop', 'b2g'])
+  check_output([ADB] + ADB_DEVICE + ['push', tempfilename, b2g_get_prefs_filename()])
+  check_output([ADB] + ADB_DEVICE + ['shell', 'start', 'b2g'])
   print 'Rebooting phone...'
 
   def delete_temp_file():
@@ -468,8 +472,20 @@ def b2g_get_description(desc):
       if not desc or desc.lower() in k.lower():
         print k + ': ' + str(v)
 
+def check_call(cmd):
+  logv('Running ' + str(cmd))
+  retcode = subprocess.check_call(cmd)
+  logv('Returned with exit code ' + str(retcode))
+  return retcode
+
+def check_output(cmd):
+  logv('Running ' + str(cmd))
+  output = subprocess.check_output(cmd)
+  logv('Returned with output "\n' + output + '"')
+  return output
+
 def main():
-  global b2g_socket, webappsActorName, deviceActorName, HOST, PORT, VERBOSE, ADB
+  global b2g_socket, webappsActorName, deviceActorName, HOST, PORT, LOG_VERBOSE, ADB, ADB_DEVICE
   if len(sys.argv) < 2 or '--help' in sys.argv or 'help' in sys.argv or '-v' in sys.argv:
     print '''Firefox OS Debug Bridge, a tool for automating FFOS device tasks from the command line.
 
@@ -514,15 +530,15 @@ def main():
       --port <number>: Specifies the network port to connect to. Default: 6000.
       --verbose: Enables verbose printing, mostly useful for debugging.
       --simulator: Signal that we will be connecting to a FFOS simulator and not a real device.
+      --device <deviceid>: Specifies the ID of the ADB device to connect to.
 
   In the above, whenever a command requires an <app> to be specified, either the human-readable name, 
   localId or manifestURL of the application can be used.'''
 
     sys.exit(0)
-
   connect_to_simulator = False
 
-  options_with_value = ['--host', '--port']
+  options_with_value = ['--host', '--port', '--device']
   options = options_with_value + ['--verbose', '--simulator']
   # Process options
   for i in range(0, len(sys.argv)):
@@ -534,14 +550,16 @@ def main():
       HOST = sys.argv[i+1]
     elif sys.argv[i] == '--port':
       PORT = int(sys.argv[i+1])
+    elif sys.argv[i] == '--device':
+      ADB_DEVICE = ['-s', sys.argv[i+1]]
     elif sys.argv[i] == '--verbose':
-      VERBOSE = True
+      LOG_VERBOSE = True
     elif sys.argv[i] == '--simulator':
       connect_to_simulator = True
 
     # Clear the processed options so that parsing the commands below won't trip up on these.
-    if sys.argv[i] in options: sys.argv[i] = ''
     if sys.argv[i] in options_with_value: sys.argv[i+1] = ''
+    if sys.argv[i] in options: sys.argv[i] = ''
 
   sys.argv = filter(lambda x: len(x) > 0, sys.argv)
 
@@ -555,22 +573,27 @@ def main():
       print ' 3) The device is listed when you run "adb devices" on the command line.'
       print ' 4) When launching ffdb, remember to acknowledge the "incoming debug connection" dialog if it pops up on the device.'
       sys.exit(1)
+    if len(devices) == 1 and ADB_DEVICE[0] == '-d':
+      ADB_DEVICE = ['-s', devices[0][0]]
+      logv('Autodetecting to talk to device ' + str(devices[0]))
   b2g_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   if WINDOWS:
     # Python Windows issue: user cannot press Ctrl-C to abort from a socket .recv() Therefore simulate blocking sockets with looping over reads that time out.
     b2g_socket.settimeout(0.5)
   try:
+    logv('connecting to B2G devtools socket ' + HOST + ':' + str(PORT))
     b2g_socket.connect((HOST, PORT))
   except Exception, e:
-    if e[0] == 61 or e[0] == 107 or e[0] == 111: # 61 == Connection refused and 107+111 == Transport endpoint is not connected
+    logv('Got exception ' + str(e) + ', code "' + e[0] + '"')
+    if e[0] == 61 or e[0] == 107 or e[0] == 111 or e[0] == 'timed out': # 61 == Connection refused and 107+111 == Transport endpoint is not connected
       if (HOST == 'localhost' or HOST == '127.0.0.1') and not connect_to_simulator:
-        cmd = [ADB, 'forward', 'tcp:'+str(PORT), 'localfilesystem:/data/local/debugger-socket']
+        cmd = [ADB] + ADB_DEVICE + ['forward', 'tcp:'+str(PORT), 'localfilesystem:/data/local/debugger-socket']
         print 'Connection to ' + HOST + ':' + str(PORT) + ' refused, attempting to forward device debugger-socket to local address by calling ' + str(cmd) + ':'
       else:
         print 'Error! Failed to connect to B2G ' + ('simulator' if connect_to_simulator else 'device') + ' debugger socket at address ' + HOST + ':' + str(PORT) + '!'
         sys.exit(1)
       try:
-        retcode = subprocess.check_call(cmd)
+        retcode = check_call(cmd)
       except Exception, e:
         print 'Error! Failed to execute adb: ' + str(e)
         print "Check that the device is connected properly, call 'adb devices' to list the detected devices."
