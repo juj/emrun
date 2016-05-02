@@ -1120,7 +1120,10 @@ def main():
   url = 'http://' + server_root + ':' + str(options.port)+'/'+url
   
   os.chdir(serve_dir)
-  logv('Web server root directory: ' + os.path.abspath('.'))
+  if options.no_browser:
+    logi('Web server root directory: ' + os.path.abspath('.'))
+  else:
+    logv('Web server root directory: ' + os.path.abspath('.'))
 
   if options.android:
     if not options.no_browser:
@@ -1253,6 +1256,8 @@ def main():
     # For Android automation, we execute adb, so this process does not represent a browser and no point killing it.
     if options.android:
       browser_process = None
+  else:
+    logi('Now listening at http://localhost:' + str(options.port) + '/')
 
   if browser_process:
     premature_quit_code = browser_process.poll()
