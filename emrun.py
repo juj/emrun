@@ -446,13 +446,26 @@ class HTTPHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
       else:
         # Manually implement directory listing support.
         return self.list_directory(path)
-    ctype = self.guess_type(path)
+
     try:
       f = open(path, 'rb')
     except IOError:
       self.send_error(404, "File not found: " + path)
       return None
     self.send_response(200)
+    guess_file_type = path
+    # All files of type x.gz are served as gzip-compressed, which means the browser will transparently decode the file before passing the uncompressed bytes to the JS page.
+    # Note: In a slightly silly manner, detect files ending with "gz" and not ".gz", since both Unity and UE4 generate multiple files with .jsgz, .datagz, .memgz, .symbolsgz suffixes and so on,
+    #       so everything goes.
+    # Note 2: If the JS application would like to receive the actual bits of a gzipped file, instead of having the browser decompress it immediately, then it can't use the suffix .gz when using emrun.
+    #         To work around, one can use the suffix .gzip instead.
+    if 'gzip' in self.headers['Accept-Encoding'] and path.lower().endswith('gz'):
+      self.send_header('Content-Encoding', 'gzip')
+      logv('Serving ' + path + ' as gzip-compressed.')
+      guess_file_type = guess_file_type[:-2]
+      if guess_file_type.endswith('.'): guess_file_type = guess_file_type[:-1]
+
+    ctype = self.guess_type(guess_file_type)
     self.send_header("Content-type", ctype)
     fs = os.fstat(f.fileno())
     self.send_header("Content-Length", str(fs[6]))
