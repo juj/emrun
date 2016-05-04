@@ -473,6 +473,7 @@ class HTTPHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
     self.send_header('Cache-Control','no-cache, must-revalidate')
     self.send_header('Connection','close')
     self.send_header('Expires','-1')
+    self.send_header('Access-Control-Allow-Origin', '*')
     self.end_headers()
     page_last_served_time = tick()
     return f
