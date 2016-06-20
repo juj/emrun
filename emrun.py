@@ -758,6 +758,11 @@ def get_computer_model():
         hwmodel = subprocess.check_output(['sysctl', 'hw.model'])
         hwmodel = re.search('hw.model: (.*)', hwmodel).group(1).strip()
         return hwmodel
+    elif WINDOWS:
+      manufacturer = subprocess.check_output(['wmic', 'baseboard', 'get', 'manufacturer']).split('\n')[1].strip()
+      model = subprocess.check_output(['wmic', 'baseboard', 'get', 'version']).split('\n')[1].strip()
+      product = subprocess.check_output(['wmic', 'baseboard', 'get', 'product']).split('\n')[1].strip()
+      return manufacturer + ' ' + model + ', ' + product
   except Exception, e:
     logv(str(e))
   return 'Generic'
