@@ -561,7 +561,7 @@ def get_cpu_infoline():
       all_info = subprocess.check_output(command, shell=True).strip()
       for line in all_info.split("\n"):
         if "model name" in line:
-          cpu_name = re.sub( ".*model name.*:", "", line,1).strip()
+          cpu_name = re.sub( ".*model name.*:", "", line, 1).strip()
   except:
     return "Unknown"
 
@@ -731,6 +731,36 @@ def win_get_file_properties(fname):
     pass
 
   return props
+
+def get_computer_model():
+  try:
+    if OSX:
+      try:
+        with open(os.path.join(os.getenv("HOME"), '.emrun.hwmodel.cached'), 'r') as f:
+          model = f.read()
+          return model
+      except:
+        pass
+
+      try:
+        # http://apple.stackexchange.com/questions/98080/can-a-macs-model-year-be-determined-via-terminal-command
+        serial = subprocess.check_output(['system_profiler', 'SPHardwareDataType'])
+        serial = re.search("Serial Number (.*): (.*)", serial)
+        serial = serial.group(2).strip()[-4:]
+        cmd = ['curl', '-s', 'http://support-sp.apple.com/sp/product?cc=' + serial]
+        logv(str(cmd))
+        model = subprocess.check_output(cmd)
+        model = re.search('<configCode>(.*)</configCode>', model)
+        model = model.group(1).strip()
+        open(os.path.join(os.getenv("HOME"), '.emrun.hwmodel.cached'), 'w').write(model) # Cache the hardware model to disk
+        return model
+      except:
+        hwmodel = subprocess.check_output(['sysctl', 'hw.model'])
+        hwmodel = re.search('hw.model: (.*)', hwmodel).group(1).strip()
+        return hwmodel
+  except Exception, e:
+    logv(str(e))
+  return 'Generic'
 
 def get_os_version():
   try:
@@ -1222,6 +1252,7 @@ def main():
       logi('CPU: ' + get_android_cpu_infoline())
     else:
       logi('Computer name: ' + socket.gethostname()) # http://stackoverflow.com/questions/799767/getting-name-of-windows-computer-running-python-script
+      logi('Model: ' + get_computer_model())
       logi('OS: ' + get_os_version() + ' with ' + str(get_system_memory()/1024/1024) + ' MB of System RAM')
       logi('CPU: ' + get_cpu_infoline())
       print_gpu_infolines()
