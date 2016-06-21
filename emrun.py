@@ -548,12 +548,18 @@ class HTTPHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 
 # From http://stackoverflow.com/questions/4842448/getting-processor-information-in-python
 # Returns a string with something like "AMD64, Intel(R) Core(TM) i5-2557M CPU @ 1.70GHz, Intel64 Family 6 Model 42 Stepping 7, GenuineIntel"
-def get_cpu_infoline():
+def get_cpu_info():
+  physical_cores = 1
+  logical_cores = 1
+  frequency = 0
   try:
     if WINDOWS:
       root_winmgmts = GetObject("winmgmts:root\cimv2")
       cpus = root_winmgmts.ExecQuery("Select * from Win32_Processor")
       cpu_name = cpus[0].Name + ', ' + platform.processor()
+      physical_cores = subprocess.check_output(['wmic', 'cpu', 'get', 'NumberOfCores']).split('\n')[1].strip()
+      logical_cores = subprocess.check_output(['wmic', 'cpu', 'get', 'NumberOfLogicalProcessors']).split('\n')[1].strip()
+      frequency = subprocess.check_output(['wmic', 'cpu', 'get', 'MaxClockSpeed']).split('\n')[1].strip()
     elif OSX:
       cpu_name = subprocess.check_output(['sysctl', '-n', 'machdep.cpu.brand_string']).strip()
     elif LINUX:
@@ -565,7 +571,11 @@ def get_cpu_infoline():
   except:
     return "Unknown"
 
-  return platform.machine() + ', ' + cpu_name
+  return { 'model': platform.machine() + ', ' + cpu_name,
+    'physicalCores': physical_cores,
+    'logicalCores': logical_cores,
+    'frequency': frequency
+    }
 
 def get_android_cpu_infoline():
   lines = subprocess.check_output([ADB, 'shell', 'cat', '/proc/cpuinfo']).split('\n')
@@ -1273,14 +1283,15 @@ def main():
           'model': get_computer_model(),
           'os': get_os_version(),
           'ram': get_system_memory(),
-          'cpu': get_cpu_infoline(),
+          'cpu': get_cpu_info(),
           'gpu': get_gpu_info()
           }, indent=2)
       else:
         logi('Computer name: ' + socket.gethostname()) # http://stackoverflow.com/questions/799767/getting-name-of-windows-computer-running-python-script
         logi('Model: ' + get_computer_model())
         logi('OS: ' + get_os_version() + ' with ' + str(get_system_memory()/1024/1024) + ' MB of System RAM')
-        logi('CPU: ' + get_cpu_infoline())
+        cpu = get_cpu_info()
+        logi('CPU: ' + cpu['model'] + ', ' + str(cpu['frequency']) + ' MHz, ' + str(cpu['physicalCores']) + ' physical cores, ' + str(cpu['logicalCores']) + ' logical cores')
         gpus = get_gpu_info()
         if len(gpus) == 1:
           print "GPU: " + gpus[0]['model'] + " with " + str(gpus[0]['ram']/1024/1024) + " MB of VRAM"
