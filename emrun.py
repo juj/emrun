@@ -760,9 +760,10 @@ def get_computer_model():
         return hwmodel
     elif WINDOWS:
       manufacturer = subprocess.check_output(['wmic', 'baseboard', 'get', 'manufacturer']).split('\n')[1].strip()
-      model = subprocess.check_output(['wmic', 'baseboard', 'get', 'version']).split('\n')[1].strip()
+      version = subprocess.check_output(['wmic', 'baseboard', 'get', 'version']).split('\n')[1].strip()
       product = subprocess.check_output(['wmic', 'baseboard', 'get', 'product']).split('\n')[1].strip()
-      return manufacturer + ' ' + model + ', ' + product
+      if 'Apple' in manufacturer: return manufacturer + ' ' + version + ', ' + product
+      else: return manufacturer + ' ' + product + ', ' + version
   except Exception, e:
     logv(str(e))
   return 'Generic'
