@@ -766,7 +766,13 @@ def get_os_version():
     if WINDOWS:
       versionHandle = _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion")
       productName = _winreg.QueryValueEx(versionHandle, "ProductName")
-      return productName[0]
+
+      version = ''
+      try:
+        version = ' ' + subprocess.check_output(['wmic', 'os', 'get', 'version']).split('\n')[1].strip()
+      except:
+        pass
+      return productName[0] + version
     elif OSX:
       return 'Mac OS ' + platform.mac_ver()[0]
     elif LINUX:
