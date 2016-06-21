@@ -4,7 +4,7 @@
 # Usage: emrun <options> filename.html <args to program>
 # See emrun --help for more information
 
-import os, platform, optparse, logging, re, pprint, atexit, urlparse, subprocess, sys, SocketServer, BaseHTTPServer, SimpleHTTPServer, time, string, struct, socket, cgi, tempfile, stat, shutil
+import os, platform, optparse, logging, re, pprint, atexit, urlparse, subprocess, sys, SocketServer, BaseHTTPServer, SimpleHTTPServer, time, string, struct, socket, cgi, tempfile, stat, shutil, json
 from operator import itemgetter
 from urllib import unquote
 from Queue import PriorityQueue
@@ -580,9 +580,13 @@ def get_android_cpu_infoline():
   freq = int(subprocess.check_output([ADB, 'shell', 'cat', '/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq']).strip())/1000
   return 'CPU: ' + processor + ', ' + hardware + ' @ ' + str(freq) + ' MHz'
 
-def win_print_gpu_info():
+def win_get_gpu_info():
   gpus = []
-  gpu_memory = []
+
+  def find_gpu_model(model):
+    for gpu in gpus:
+      if gpu['model'] == model: return gpu
+    return None
 
   for i in range(0, 16):
     try:
@@ -620,19 +624,13 @@ def win_print_gpu_info():
         vram = struct.unpack('l',VideoCardMemorySize)[0]
       except struct.error:
         vram = int(VideoCardMemorySize)
-      if not VideoCardDescription in gpus:
-        gpus += [VideoCardDescription]
-        gpu_memory += [str(int(vram/1024/1024))]
+      if not find_gpu_model(VideoCardDescription):
+        gpus += [{ 'model': VideoCardDescription, 'ram': vram }]
     except WindowsError:
       pass
+  return gpus
 
-  if len(gpus) == 1:
-    print "GPU: " + gpus[0] + " with " + gpu_memory[0] + " MB of VRAM"
-  elif len(gpus) > 1:
-    for i in range(0, len(gpus)):
-      print "GPU"+str(i)+ ": " + gpus[i] + " with " + gpu_memory[i] + " MBs of VRAM"
-
-def linux_print_gpu_info():
+def linux_get_gpu_info():
   try:
     glxinfo = subprocess.check_output('glxinfo')
     for line in glxinfo.split("\n"):
@@ -642,31 +640,26 @@ def linux_print_gpu_info():
         gl_version = line[len("OpenGL version string:"):].strip()
       if "OpenGL renderer string:" in line:
         gl_renderer = line[len("OpenGL renderer string:"):].strip()
-    logi('GPU: ' + gl_vendor + ' ' + gl_renderer + ', GL version ' + gl_version)
+    return [{'model': gl_vendor + ' ' + gl_renderer + ', GL version ' + gl_version, 'ram': 'unknown'}]
   except:
     pass
 
-def osx_print_gpu_info():
+def osx_get_gpu_info():
   try:
     info = subprocess.check_output(['system_profiler', 'SPDisplaysDataType'])
     gpu = re.search("Chipset Model: (.*)", info)
     if gpu:
       chipset = gpu.group(1)
     vram = re.search("VRAM \(Total\): (.*) MB", info)
-    if vram:
-      logi('GPU: ' + chipset + ' with ' + vram.group(1) + ' MBs of VRAM')
-    else:
-      logi('GPU: ' + chipset)
+    return [{'model': chipset, 'ram': vram.group(1) if vram else 'unknown'}]
   except:
     pass
 
-def print_gpu_infolines():
-  if WINDOWS:
-    win_print_gpu_info()
-  elif LINUX:
-    linux_print_gpu_info()
-  elif OSX:
-    osx_print_gpu_info()
+def get_gpu_info():
+  if WINDOWS: return win_get_gpu_info()
+  elif LINUX: return linux_get_gpu_info()
+  elif OSX: return osx_get_gpu_info()
+  else: return []
 
 def get_executable_version(filename):
   try:
@@ -1085,6 +1078,9 @@ def main():
   parser.add_option('--browser_info', dest='browser_info', action='store_true',
     help='Prints information about the target browser to launch at startup.')
 
+  parser.add_option('--json', dest='json', action='store_true',
+    help='If specified, --system_info and --browser_info are outputted in JSON format.')
+
   parser.add_option('--safe_firefox_profile', dest='safe_firefox_profile', action='store_true',
     help='If true, the browser is launched into a new clean Firefox profile that is suitable for unattended automated runs. (If target browser != Firefox, this parameter is ignored)')
 
@@ -1253,20 +1249,55 @@ def main():
   if options.system_info:
     logi('Time of run: ' + time.strftime("%x %X"))
     if options.android:
-      logi('Model: ' + get_android_model())
-      logi('OS: ' + get_android_os_version() + ' with ' + str(get_system_memory()/1024/1024) + ' MB of System RAM')
-      logi('CPU: ' + get_android_cpu_infoline())
+      if options.json:
+        print json.dumps({
+          'model': get_android_model(),
+          'os': get_android_os_version(),
+          'ram': get_system_memory(),
+          'cpu': get_android_cpu_infoline()
+          }, indent=2)
+      else:
+        logi('Model: ' + get_android_model())
+        logi('OS: ' + get_android_os_version() + ' with ' + str(get_system_memory()/1024/1024) + ' MB of System RAM')
+        logi('CPU: ' + get_android_cpu_infoline())
     else:
-      logi('Computer name: ' + socket.gethostname()) # http://stackoverflow.com/questions/799767/getting-name-of-windows-computer-running-python-script
-      logi('Model: ' + get_computer_model())
-      logi('OS: ' + get_os_version() + ' with ' + str(get_system_memory()/1024/1024) + ' MB of System RAM')
-      logi('CPU: ' + get_cpu_infoline())
-      print_gpu_infolines()
+      if options.json:
+        print json.dumps({
+          'name': socket.gethostname(),
+          'model': get_computer_model(),
+          'os': get_os_version(),
+          'ram': get_system_memory(),
+          'cpu': get_cpu_infoline(),
+          'gpu': get_gpu_info()
+          }, indent=2)
+      else:
+        logi('Computer name: ' + socket.gethostname()) # http://stackoverflow.com/questions/799767/getting-name-of-windows-computer-running-python-script
+        logi('Model: ' + get_computer_model())
+        logi('OS: ' + get_os_version() + ' with ' + str(get_system_memory()/1024/1024) + ' MB of System RAM')
+        logi('CPU: ' + get_cpu_infoline())
+        gpus = get_gpu_info()
+        if len(gpus) == 1:
+          print "GPU: " + gpus[0]['model'] + " with " + str(gpus[0]['ram']/1024/1024) + " MB of VRAM"
+        elif len(gpus) > 1:
+          for i in range(0, len(gpus)):
+            print "GPU"+str(i)+ ": " + gpus[i]['model'] + " with " + str(gpus[i]['ram']/1024/1024) + " MBs of VRAM"
+
   if options.browser_info:
     if options.android:
-      logi('Browser: Android ' + browser_app)
+      if option.json:
+        print json.dumps({
+          'browser': 'Android ' + browser_app
+          }, indent=2)
+      else:
+        logi('Browser: Android ' + browser_app)
     else:
-      logi('Browser: ' + browser_display_name(browser[0]) + ' ' + get_executable_version(browser_exe))
+      browser_name = browser_display_name(browser[0]) + ' ' + get_executable_version(browser_exe)
+      if options.json:
+        print json.dumps({
+          'browser': browser_name
+          }, indent=2)
+      else:
+        logi('Browser: ' + browser_name)
 
   # Suppress run warning if requested.
   if options.no_emrun_detect:
