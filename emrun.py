@@ -650,18 +650,21 @@ def linux_get_gpu_info():
         gl_version = line[len("OpenGL version string:"):].strip()
       if "OpenGL renderer string:" in line:
         gl_renderer = line[len("OpenGL renderer string:"):].strip()
-    return [{'model': gl_vendor + ' ' + gl_renderer + ', GL version ' + gl_version, 'ram': 'unknown'}]
+    return [{'model': gl_vendor + ' ' + gl_renderer + ', GL version ' + gl_version, 'ram': 0}]
   except:
     pass
 
 def osx_get_gpu_info():
+  gpus = []
   try:
     info = subprocess.check_output(['system_profiler', 'SPDisplaysDataType'])
-    gpu = re.search("Chipset Model: (.*)", info)
-    if gpu:
-      chipset = gpu.group(1)
-    vram = re.search("VRAM \(Total\): (.*) MB", info)
-    return [{'model': chipset, 'ram': vram.group(1) if vram else 'unknown'}]
+    info = info.split("Chipset Model:")[1:]
+    for gpu in info:
+      model_name = gpu.split('\n')[0].strip()
+      bus = re.search("Bus: (.*)", gpu).group(1)
+      memory = int(re.search("VRAM (.*?): (.*) MB", gpu).group(2))
+      gpus += [{'model': model_name + ' (' + bus + ')', 'ram': memory * 1024 * 1024}]
+    return gpus
   except:
     pass
 
