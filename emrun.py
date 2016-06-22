@@ -557,11 +557,14 @@ def get_cpu_info():
       root_winmgmts = GetObject("winmgmts:root\cimv2")
       cpus = root_winmgmts.ExecQuery("Select * from Win32_Processor")
       cpu_name = cpus[0].Name + ', ' + platform.processor()
-      physical_cores = subprocess.check_output(['wmic', 'cpu', 'get', 'NumberOfCores']).split('\n')[1].strip()
-      logical_cores = subprocess.check_output(['wmic', 'cpu', 'get', 'NumberOfLogicalProcessors']).split('\n')[1].strip()
-      frequency = subprocess.check_output(['wmic', 'cpu', 'get', 'MaxClockSpeed']).split('\n')[1].strip()
+      physical_cores = int(subprocess.check_output(['wmic', 'cpu', 'get', 'NumberOfCores']).split('\n')[1].strip())
+      logical_cores = int(subprocess.check_output(['wmic', 'cpu', 'get', 'NumberOfLogicalProcessors']).split('\n')[1].strip())
+      frequency = int(subprocess.check_output(['wmic', 'cpu', 'get', 'MaxClockSpeed']).split('\n')[1].strip())
     elif OSX:
       cpu_name = subprocess.check_output(['sysctl', '-n', 'machdep.cpu.brand_string']).strip()
+      physical_cores = int(subprocess.check_output(['sysctl', '-n', 'machdep.cpu.core_count']).strip())
+      logical_cores = int(subprocess.check_output(['sysctl', '-n', 'machdep.cpu.thread_count']).strip())
+      frequency = int(subprocess.check_output(['sysctl', '-n', 'hw.cpufrequency']).strip()) / 1000000
     elif LINUX:
       command = "cat /proc/cpuinfo"
       all_info = subprocess.check_output(command, shell=True).strip()
