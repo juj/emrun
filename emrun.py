@@ -566,11 +566,14 @@ def get_cpu_info():
       logical_cores = int(subprocess.check_output(['sysctl', '-n', 'machdep.cpu.thread_count']).strip())
       frequency = int(subprocess.check_output(['sysctl', '-n', 'hw.cpufrequency']).strip()) / 1000000
     elif LINUX:
-      command = "cat /proc/cpuinfo"
-      all_info = subprocess.check_output(command, shell=True).strip()
+      all_info = subprocess.check_output(['cat', '/proc/cpuinfo']).strip()
       for line in all_info.split("\n"):
         if "model name" in line:
           cpu_name = re.sub( ".*model name.*:", "", line, 1).strip()
+      lscpu = subprocess.check_output(['lscpu'])
+      frequency = int(float(re.search('CPU MHz: (.*)', lscpu).group(1).strip()) + 0.5)
+      physical_cores = int(re.search('Core\(s\) per socket: (.*)', lscpu).group(1).strip())
+      logical_cores = physical_cores * int(re.search('Thread\(s\) per core: (.*)', lscpu).group(1).strip())
   except:
     return "Unknown"
 
