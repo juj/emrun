@@ -647,21 +647,38 @@ def win_get_gpu_info():
   return gpus
 
 def linux_get_gpu_info():
+  glinfo = ''
   try:
     glxinfo = subprocess.check_output('glxinfo')
-    if 'OpenGL' not in glxinfo:
-      return [{'model': 'Unknown (glxinfo not installed)', 'ram': 0}]
     for line in glxinfo.split("\n"):
-      if "OpenGL vendor string:" in line:
-        gl_vendor = line[len("OpenGL vendor string:"):].strip()
-      if "OpenGL version string:" in line:
-        gl_version = line[len("OpenGL version string:"):].strip()
-      if "OpenGL renderer string:" in line:
-        gl_renderer = line[len("OpenGL renderer string:"):].strip()
-    return [{'model': gl_vendor + ' ' + gl_renderer + ', GL version ' + gl_version, 'ram': 0}]
-  except OSError, e:
-    if e[0] == 2: return [{'model': 'Unknown (glxinfo not installed)', 'ram': 0}]
-    return [{'model': 'Unknown', 'ram': 0}]
+      if "OpenGL vendor string:" in line: gl_vendor = line[len("OpenGL vendor string:"):].strip()
+      if "OpenGL version string:" in line: gl_version = line[len("OpenGL version string:"):].strip()
+      if "OpenGL renderer string:" in line: gl_renderer = line[len("OpenGL renderer string:"):].strip()
+    glinfo = gl_vendor + ' ' + gl_renderer + ', GL version ' + gl_version
+  except Exception, e:
+    logv(e)
+
+  adapterinfo = ''
+  try:
+    vgainfo = subprocess.check_output(['lshw', '-C', 'display'], stderr=subprocess.PIPE)
+    vendor = re.search("vendor: (.*)", vgainfo).group(1).strip()
+    product = re.search("product: (.*)", vgainfo).group(1).strip()
+    description = re.search("description: (.*)", vgainfo).group(1).strip()
+    clock = re.search("clock: (.*)", vgainfo).group(1).strip()
+    adapterinfo = vendor + ' ' + product + ', ' + description + ' (' + clock + ')'
+  except Exception, e:
+    logv(e)
+
+  ram = 0
+  try:
+    vgainfo = subprocess.check_output('lspci -v -s $(lspci | grep VGA | cut -d " " -f 1)', shell=True, stderr=subprocess.PIPE)
+    ram = int(re.search("\[size=([0-9]*)M\]", vgainfo).group(1)) * 1024 * 1024
+  except Exception, e:
+    logv(e)
+
+  model = (adapterinfo + ' ' + glinfo).strip()
+  if not model: model = 'Unknown'
+  return [{'model': model, 'ram': ram}]
 
 def osx_get_gpu_info():
   gpus = []
@@ -670,8 +687,8 @@ def osx_get_gpu_info():
     info = info.split("Chipset Model:")[1:]
     for gpu in info:
       model_name = gpu.split('\n')[0].strip()
-      bus = re.search("Bus: (.*)", gpu).group(1)
-      memory = int(re.search("VRAM (.*?): (.*) MB", gpu).group(2))
+      bus = re.search("Bus: (.*)", gpu).group(1).strip()
+      memory = int(re.search("VRAM (.*?): (.*) MB", gpu).group(2).strip())
       gpus += [{'model': model_name + ' (' + bus + ')', 'ram': memory * 1024 * 1024}]
     return gpus
   except:
