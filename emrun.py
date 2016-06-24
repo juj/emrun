@@ -778,6 +778,7 @@ def get_computer_model():
   return 'Generic'
 
 def get_os_version():
+  bitness = ' (64bit)' if platform.machine() in ['AMD64', 'x86_64'] else ' (32bit)'
   try:
     if WINDOWS:
       versionHandle = _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion")
@@ -788,12 +789,12 @@ def get_os_version():
         version = ' ' + subprocess.check_output(['wmic', 'os', 'get', 'version']).split('\n')[1].strip()
       except:
         pass
-      return productName[0] + version
+      return productName[0] + version + bitness
     elif OSX:
-      return 'Mac OS ' + platform.mac_ver()[0]
+      return 'Mac OS ' + platform.mac_ver()[0] + bitness
     elif LINUX:
       kernel_version = subprocess.check_output(['uname', '-r']).strip()
-      return ' '.join(platform.linux_distribution()) + ', linux kernel ' + kernel_version + ' ' + platform.architecture()[0]
+      return ' '.join(platform.linux_distribution()) + ', linux kernel ' + kernel_version + ' ' + platform.architecture()[0] + bitness
   except:
     return 'Unknown OS'
 
