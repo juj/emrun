@@ -649,6 +649,8 @@ def win_get_gpu_info():
 def linux_get_gpu_info():
   try:
     glxinfo = subprocess.check_output('glxinfo')
+    if 'OpenGL' not in glxinfo:
+      return [{'model': 'Unknown (glxinfo not installed)', 'ram': 0}]
     for line in glxinfo.split("\n"):
       if "OpenGL vendor string:" in line:
         gl_vendor = line[len("OpenGL vendor string:"):].strip()
@@ -657,8 +659,9 @@ def linux_get_gpu_info():
       if "OpenGL renderer string:" in line:
         gl_renderer = line[len("OpenGL renderer string:"):].strip()
     return [{'model': gl_vendor + ' ' + gl_renderer + ', GL version ' + gl_version, 'ram': 0}]
-  except:
-    pass
+  except OSError, e:
+    if e[0] == 2: return [{'model': 'Unknown (glxinfo not installed)', 'ram': 0}]
+    return [{'model': 'Unknown', 'ram': 0}]
 
 def osx_get_gpu_info():
   gpus = []
