@@ -1068,6 +1068,43 @@ def remove_tree(d):
   except Exception as e:
     pass
 
+def get_system_info(format_json):
+  if emrun_options.android:
+    if format_json:
+      return json.dumps({
+          'model': get_android_model(),
+          'os': get_android_os_version(),
+          'ram': get_system_memory(),
+          'cpu': get_android_cpu_infoline()
+          }, indent=2)
+    else:
+      info = 'Model: ' + get_android_model() + '\n'
+      info += 'OS: ' + get_android_os_version() + ' with ' + str(get_system_memory()/1024/1024) + ' MB of System RAM\n'
+      info += 'CPU: ' + get_android_cpu_infoline() + '\n'
+  else:
+    if format_json:
+      return json.dumps({
+          'name': socket.gethostname(),
+          'model': get_computer_model(),
+          'os': get_os_version(),
+          'ram': get_system_memory(),
+          'cpu': get_cpu_info(),
+          'gpu': get_gpu_info()
+          }, indent=2)
+    else:
+      cpu = get_cpu_info()
+      gpus = get_gpu_info()
+      info = 'Computer name: ' + socket.gethostname() + '\n' # http://stackoverflow.com/questions/799767/getting-name-of-windows-computer-running-python-script
+      info += 'Model: ' + get_computer_model() + '\n'
+      info += 'OS: ' + get_os_version() + ' with ' + str(get_system_memory()/1024/1024) + ' MB of System RAM\n'
+      info += 'CPU: ' + cpu['model'] + ', ' + str(cpu['frequency']) + ' MHz, ' + str(cpu['physicalCores']) + ' physical cores, ' + str(cpu['logicalCores']) + ' logical cores\n';
+      if len(gpus) == 1:
+        info += "GPU: " + gpus[0]['model'] + " with " + str(gpus[0]['ram']/1024/1024) + " MB of VRAM\n"
+      elif len(gpus) > 1:
+        for i in range(0, len(gpus)):
+          info += "GPU"+str(i)+ ": " + gpus[i]['model'] + " with " + str(gpus[i]['ram']/1024/1024) + " MBs of VRAM\n"
+      return info
+
 def main():
   global browser_process, processname_killed_atexit, emrun_options, emrun_not_enabled_nag_printed, ADB
   usage_str = "usage: emrun [emrun_options] filename.html [html_cmdline_options]\n\n   where emrun_options specifies command line options for emrun itself, whereas\n   html_cmdline_options specifies startup arguments to the program."
@@ -1303,40 +1340,7 @@ def main():
 
   if options.system_info:
     logi('Time of run: ' + time.strftime("%x %X"))
-    if options.android:
-      if options.json:
-        print json.dumps({
-          'model': get_android_model(),
-          'os': get_android_os_version(),
-          'ram': get_system_memory(),
-          'cpu': get_android_cpu_infoline()
-          }, indent=2)
-      else:
-        logi('Model: ' + get_android_model())
-        logi('OS: ' + get_android_os_version() + ' with ' + str(get_system_memory()/1024/1024) + ' MB of System RAM')
-        logi('CPU: ' + get_android_cpu_infoline())
-    else:
-      if options.json:
-        print json.dumps({
-          'name': socket.gethostname(),
-          'model': get_computer_model(),
-          'os': get_os_version(),
-          'ram': get_system_memory(),
-          'cpu': get_cpu_info(),
-          'gpu': get_gpu_info()
-          }, indent=2)
-      else:
-        logi('Computer name: ' + socket.gethostname()) # http://stackoverflow.com/questions/799767/getting-name-of-windows-computer-running-python-script
-        logi('Model: ' + get_computer_model())
-        logi('OS: ' + get_os_version() + ' with ' + str(get_system_memory()/1024/1024) + ' MB of System RAM')
-        cpu = get_cpu_info()
-        logi('CPU: ' + cpu['model'] + ', ' + str(cpu['frequency']) + ' MHz, ' + str(cpu['physicalCores']) + ' physical cores, ' + str(cpu['logicalCores']) + ' logical cores')
-        gpus = get_gpu_info()
-        if len(gpus) == 1:
-          print "GPU: " + gpus[0]['model'] + " with " + str(gpus[0]['ram']/1024/1024) + " MB of VRAM"
-        elif len(gpus) > 1:
-          for i in range(0, len(gpus)):
-            print "GPU"+str(i)+ ": " + gpus[i]['model'] + " with " + str(gpus[i]['ram']/1024/1024) + " MBs of VRAM"
+    print get_system_info(format_json=options.json)
 
   if options.browser_info:
     if options.android:
