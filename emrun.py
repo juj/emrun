@@ -492,6 +492,7 @@ class HTTPHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
     global page_exit_code, emrun_options, have_received_messages
 
     (_, _, path, query, _) = urlparse.urlsplit(self.path)
+    logv('POST: "' + self.path + '" (path: "' + path + '", query: "' + query + '"')
     if query.startswith('file='): # Binary file dump/upload handling. Requests to "stdio.html?file=filename" will write binary data to the given file.
       data = self.rfile.read(int(self.headers['Content-Length']))
       filename = query[len('file='):]
@@ -504,6 +505,16 @@ class HTTPHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
       open(filename, 'wb').write(data)
       print 'Wrote ' + str(len(data)) + ' bytes to file "' + filename + '".'
       have_received_messages = True
+    elif path == '/system_info':
+      data = get_system_info(format_json=True)
+      self.send_response(200)
+      self.send_header("Content-type", "application/json")
+      self.send_header('Cache-Control','no-cache, must-revalidate')
+      self.send_header('Connection','close')
+      self.send_header('Expires','-1')
+      self.end_headers()
+      self.wfile.write(data)
+      return
     else:
       data = self.rfile.read(int(self.headers['Content-Length']))
       data = data.replace("+", " ")
