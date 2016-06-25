@@ -1092,6 +1092,7 @@ def get_system_info(format_json):
       info = 'Model: ' + get_android_model() + '\n'
       info += 'OS: ' + get_android_os_version() + ' with ' + str(get_system_memory()/1024/1024) + ' MB of System RAM\n'
       info += 'CPU: ' + get_android_cpu_infoline() + '\n'
+      return info.strip()
   else:
     if format_json:
       return json.dumps({
@@ -1114,7 +1115,7 @@ def get_system_info(format_json):
       elif len(gpus) > 1:
         for i in range(0, len(gpus)):
           info += "GPU"+str(i)+ ": " + gpus[i]['model'] + " with " + str(gpus[i]['ram']/1024/1024) + " MBs of VRAM\n"
-      return info
+      return info.strip()
 
 def main():
   global browser_process, processname_killed_atexit, emrun_options, emrun_not_enabled_nag_printed, ADB
