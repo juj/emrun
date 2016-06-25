@@ -4,7 +4,7 @@
 # Usage: emrun <options> filename.html <args to program>
 # See emrun --help for more information
 
-import os, platform, optparse, logging, re, pprint, atexit, urlparse, subprocess, sys, SocketServer, BaseHTTPServer, SimpleHTTPServer, time, string, struct, socket, cgi, tempfile, stat, shutil, json
+import os, platform, optparse, logging, re, pprint, atexit, urlparse, subprocess, sys, SocketServer, BaseHTTPServer, SimpleHTTPServer, time, string, struct, socket, cgi, tempfile, stat, shutil, json, uuid
 from operator import itemgetter
 from urllib import unquote
 from Queue import PriorityQueue
@@ -1094,6 +1094,16 @@ def get_system_info(format_json):
       info += 'CPU: ' + get_android_cpu_infoline() + '\n'
       return info.strip()
   else:
+    try:
+      unique_system_id = open(os.path.expanduser('~/.emrun.generated.guid'), 'r').read().strip()
+    except:
+      import uuid
+      unique_system_id = str(uuid.uuid4())
+      try:
+        open(os.path.expanduser('~/.emrun.generated.guid'), 'w').write(unique_system_id)
+      except Exception, e:
+        logv(e)
+
     if format_json:
       return json.dumps({
           'name': socket.gethostname(),
@@ -1101,7 +1111,8 @@ def get_system_info(format_json):
           'os': get_os_version(),
           'ram': get_system_memory(),
           'cpu': get_cpu_info(),
-          'gpu': get_gpu_info()
+          'gpu': get_gpu_info(),
+          'uuid': unique_system_id
           }, indent=2)
     else:
       cpu = get_cpu_info()
@@ -1115,6 +1126,7 @@ def get_system_info(format_json):
       elif len(gpus) > 1:
         for i in range(0, len(gpus)):
           info += "GPU"+str(i)+ ": " + gpus[i]['model'] + " with " + str(gpus[i]['ram']/1024/1024) + " MBs of VRAM\n"
+      info += 'UUID: ' + unique_system_id
       return info.strip()
 
 def main():
