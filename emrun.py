@@ -796,6 +796,15 @@ def get_computer_model():
       product = subprocess.check_output(['wmic', 'baseboard', 'get', 'product']).split('\n')[1].strip()
       if 'Apple' in manufacturer: return manufacturer + ' ' + version + ', ' + product
       else: return manufacturer + ' ' + product + ', ' + version
+    elif LINUX:
+      board_vendor = subprocess.check_output(['cat', '/sys/devices/virtual/dmi/id/board_vendor']).strip()
+      board_name = subprocess.check_output(['cat', '/sys/devices/virtual/dmi/id/board_name']).strip()
+      board_version = subprocess.check_output(['cat', '/sys/devices/virtual/dmi/id/board_version']).strip()
+
+      bios_vendor = subprocess.check_output(['cat', '/sys/devices/virtual/dmi/id/bios_vendor']).strip()
+      bios_version = subprocess.check_output(['cat', '/sys/devices/virtual/dmi/id/bios_version']).strip()
+      bios_date = subprocess.check_output(['cat', '/sys/devices/virtual/dmi/id/bios_date']).strip()
+      return board_vendor + ' ' + board_name + ' ' + board_version + ', ' + bios_vendor + ' ' + bios_version + ' (' + bios_date + ')'
   except Exception, e:
     logv(str(e))
   return 'Generic'
