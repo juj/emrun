@@ -492,7 +492,7 @@ class HTTPHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
     global page_exit_code, emrun_options, have_received_messages
 
     (_, _, path, query, _) = urlparse.urlsplit(self.path)
-    logv('POST: "' + self.path + '" (path: "' + path + '", query: "' + query + '"')
+    logv('POST: "' + self.path + '" (path: "' + path + '", query: "' + query + '")')
     if query.startswith('file='): # Binary file dump/upload handling. Requests to "stdio.html?file=filename" will write binary data to the given file.
       data = self.rfile.read(int(self.headers['Content-Length']))
       filename = query[len('file='):]
@@ -1253,7 +1253,7 @@ def main():
     logi('Type emrun --help for a detailed list of available options.')
     return
 
-  file_to_serve = args[1] if len(args) > 1 else ''
+  file_to_serve = args[1] if len(args) > 1 else '.'
   
   if options.serve_root:
     serve_dir = os.path.abspath(options.serve_root)
