@@ -720,12 +720,12 @@ def get_executable_version(filename):
       version = HIWORD (ms), LOWORD (ms), HIWORD (ls), LOWORD (ls)
       return '.'.join(map(str, version))
     elif OSX:
-      plistfile = app_name[0:app_name.find('MacOS')] + 'Info.plist'
+      plistfile = filename[0:filename.find('MacOS')] + 'Info.plist'
       info = plistlib.readPlist(plistfile)
       # Data in Info.plists is a bit odd, this check combo gives best information on each browser.
-      if 'firefox' in app_name.lower():
+      if 'firefox' in filename.lower():
         return info['CFBundleShortVersionString'] + ' 20' + info['CFBundleVersion'][2:].replace('.', '-')
-      if 'opera' in app_name.lower():
+      if 'opera' in filename.lower():
         return info['CFBundleVersion']
       else:
         return info['CFBundleShortVersionString']
@@ -736,7 +736,8 @@ def get_executable_version(filename):
         return version.strip()
       else:
         return ""
-  except:
+  except Exception, e:
+    logv(e)
     return ""
 
 # http://stackoverflow.com/questions/580924/python-windows-file-version-attribute
