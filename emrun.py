@@ -506,14 +506,16 @@ class HTTPHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
       print 'Wrote ' + str(len(data)) + ' bytes to file "' + filename + '".'
       have_received_messages = True
     elif path == '/system_info':
-      data = get_system_info(format_json=True)
+      system_info = json.loads(get_system_info(format_json=True))
+      browser_info = json.loads(get_browser_info(browser_exe, format_json=True))
+      data = { 'system': system_info, 'browser': browser_info }
       self.send_response(200)
       self.send_header("Content-type", "application/json")
       self.send_header('Cache-Control','no-cache, must-revalidate')
       self.send_header('Connection','close')
       self.send_header('Expires','-1')
       self.end_headers()
-      self.wfile.write(data)
+      self.wfile.write(json.dumps(data))
       return
     else:
       data = self.rfile.read(int(self.headers['Content-Length']))
@@ -724,7 +726,7 @@ def get_executable_version(filename):
       info = plistlib.readPlist(plistfile)
       # Data in Info.plists is a bit odd, this check combo gives best information on each browser.
       if 'firefox' in filename.lower():
-        return info['CFBundleShortVersionString'] + ' 20' + info['CFBundleVersion'][2:].replace('.', '-')
+        return info['CFBundleShortVersionString'] + ' 20' + '-'.join(map((lambda x: x.zfill(2)), info['CFBundleVersion'][2:].split('.')))
       if 'opera' in filename.lower():
         return info['CFBundleVersion']
       else:
@@ -742,6 +744,19 @@ def get_executable_version(filename):
 
 def get_browser_build_date(filename):
   #return time.ctime(os.path.getmtime(filename))
+  try:
+    if OSX:
+      plistfile = filename[0:filename.find('MacOS')] + 'Info.plist'
+      info = plistlib.readPlist(plistfile)
+      # Data in Info.plists is a bit odd, this check combo gives best information on each browser.
+      if 'firefox' in filename.lower():
+        return '20' + '-'.join(map((lambda x: x.zfill(2)), info['CFBundleVersion'][2:].split('.')))
+  except Exception, e:
+    logv(e)
+
+  # No exact information about the build date, so take the last modified date of the file.
+  # This is not right, but assuming that one installed the browser shortly after the update was
+  # available, it's shooting close.
   return time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(os.path.getmtime(filename)))
 
 def get_browser_info(filename, format_json):
@@ -1145,7 +1160,7 @@ def get_system_info(format_json):
       return info.strip()
 
 def main():
-  global browser_process, processname_killed_atexit, emrun_options, emrun_not_enabled_nag_printed, ADB
+  global browser_process, browser_exe, processname_killed_atexit, emrun_options, emrun_not_enabled_nag_printed, ADB
   usage_str = "usage: emrun [emrun_options] filename.html [html_cmdline_options]\n\n   where emrun_options specifies command line options for emrun itself, whereas\n   html_cmdline_options specifies startup arguments to the program."
   parser = optparse.OptionParser(usage=usage_str)
 
