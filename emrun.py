@@ -726,7 +726,7 @@ def get_executable_version(filename):
       info = plistlib.readPlist(plistfile)
       # Data in Info.plists is a bit odd, this check combo gives best information on each browser.
       if 'firefox' in filename.lower():
-        return info['CFBundleShortVersionString'] + ' 20' + '-'.join(map((lambda x: x.zfill(2)), info['CFBundleVersion'][2:].split('.')))
+        return info['CFBundleShortVersionString']
       if 'opera' in filename.lower():
         return info['CFBundleVersion']
       else:
