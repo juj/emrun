@@ -740,6 +740,20 @@ def get_executable_version(filename):
     logv(e)
     return ""
 
+def get_browser_build_date(filename):
+  #return time.ctime(os.path.getmtime(filename))
+  return time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(os.path.getmtime(filename)))
+
+def get_browser_info(filename, format_json):
+  if format_json:
+    return json.dumps({
+      'name': browser_display_name(filename),
+      'version': get_executable_version(filename),
+      'buildDate': get_browser_build_date(filename)
+    }, indent=2)
+  else:
+    return 'Browser: ' + browser_display_name(filename) + ' ' + get_executable_version(filename) + ', build ' + get_browser_build_date(filename)
+
 # http://stackoverflow.com/questions/580924/python-windows-file-version-attribute
 def win_get_file_properties(fname):
   propNames = ('Comments', 'InternalName', 'ProductName',
@@ -1376,13 +1390,7 @@ def main():
       else:
         logi('Browser: Android ' + browser_app)
     else:
-      browser_name = browser_display_name(browser[0]) + ' ' + get_executable_version(browser_exe)
-      if options.json:
-        print json.dumps({
-          'browser': browser_name
-          }, indent=2)
-      else:
-        logi('Browser: ' + browser_name)
+      print get_browser_info(browser_exe, format_json=options.json)
 
   # Suppress run warning if requested.
   if options.no_emrun_detect:
