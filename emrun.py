@@ -743,7 +743,6 @@ def get_executable_version(filename):
     return ""
 
 def get_browser_build_date(filename):
-  #return time.ctime(os.path.getmtime(filename))
   try:
     if OSX:
       plistfile = filename[0:filename.find('MacOS')] + 'Info.plist'
@@ -757,7 +756,11 @@ def get_browser_build_date(filename):
   # No exact information about the build date, so take the last modified date of the file.
   # This is not right, but assuming that one installed the browser shortly after the update was
   # available, it's shooting close.
-  return time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(os.path.getmtime(filename)))
+  try:
+    return time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(os.path.getmtime(filename)))
+  except Exception, e:
+    logv(e)
+    return '(unknown)'
 
 def get_browser_info(filename, format_json):
   if format_json:
