@@ -585,7 +585,8 @@ def get_cpu_info():
           cpu_name = re.sub( ".*model name.*:", "", line, 1).strip()
       lscpu = subprocess.check_output(['lscpu'])
       frequency = int(float(re.search('CPU MHz: (.*)', lscpu).group(1).strip()) + 0.5)
-      physical_cores = int(re.search('Core\(s\) per socket: (.*)', lscpu).group(1).strip())
+      sockets = int(re.search('Socket\(s\): (.*)', lscpu).group(1).strip())
+      physical_cores = sockets * int(re.search('Core\(s\) per socket: (.*)', lscpu).group(1).strip())
       logical_cores = physical_cores * int(re.search('Thread\(s\) per core: (.*)', lscpu).group(1).strip())
   except:
     return "Unknown"
