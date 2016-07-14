@@ -139,7 +139,7 @@ def format_eol(msg):
 
 # Prints a message to the browser stdout output stream.
 def browser_logi(msg):
-  global browser_stdout_handle
+  global browser_stdout_handle, last_message_time
   msg = format_eol(msg)
   print >> browser_stdout_handle, msg
   browser_stdout_handle.flush()
@@ -147,7 +147,7 @@ def browser_logi(msg):
 
 # Prints a message to the browser stderr output stream.
 def browser_loge(msg):
-  global browser_stderr_handle
+  global browser_stderr_handle, last_message_time
   msg = format_eol(msg)
   print >> browser_stderr_handle, msg
   browser_stderr_handle.flush()
