@@ -249,6 +249,10 @@ user_pref("javascript.options.throw_on_asmjs_validation_failure", true);
 user_pref("datareporting.healthreport.uploadEnabled", false);
 user_pref("datareporting.healthreport.service.enabled", false);
 user_pref("datareporting.healthreport.service.firstRun", false);
+user_pref("toolkit.telemetry.enabled", false);
+user_pref("toolkit.telemetry.unified", false);
+user_pref("datareporting.policy.dataSubmissionEnabled", false);
+user_pref("datareporting.policy.dataSubmissionPolicyBypassNotification", true);
 // Throw errors on all JS engine warnings for "strict" mode execution.
 user_pref("javascript.options.werror", true);
 ''')
