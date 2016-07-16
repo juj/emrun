@@ -245,6 +245,10 @@ user_pref("media.gmp-gmpopenh264.lastUpdate", 4102437600);
 user_pref("datareporting.healthreport.nextDataSubmissionTime", 4102437600439);
 // Detect directly when executing if asm.js does not validate by throwing an error.
 user_pref("javascript.options.throw_on_asmjs_validation_failure", true);
+// Sending Firefox Health Report Telemetry data is not desirable, since these are automated runs.
+user_pref("datareporting.healthreport.uploadEnabled", false);
+user_pref("datareporting.healthreport.service.enabled", false);
+user_pref("datareporting.healthreport.service.firstRun", false);
 // Throw errors on all JS engine warnings for "strict" mode execution.
 user_pref("javascript.options.werror", true);
 ''')
