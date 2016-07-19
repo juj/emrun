@@ -253,6 +253,11 @@ user_pref("toolkit.telemetry.enabled", false);
 user_pref("toolkit.telemetry.unified", false);
 user_pref("datareporting.policy.dataSubmissionEnabled", false);
 user_pref("datareporting.policy.dataSubmissionPolicyBypassNotification", true);
+// Allow window.dump("foo\n") to print directly to console
+user_pref("browser.dom.window.dump.enabled", true);
+// Disable background add-ons related update & information check pings
+user_pref("extensions.update.enabled", false);
+user_pref("extensions.getAddons.cache.enabled", false);
 // Throw errors on all JS engine warnings for "strict" mode execution.
 user_pref("javascript.options.werror", true);
 ''')
@@ -399,7 +404,7 @@ class HTTPWebServer(SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServer):
       time_since_message = now - last_message_time
       if emrun_options.silence_timeout != 0 and time_since_message > emrun_options.silence_timeout:
         self.shutdown()
-        logv('No activity in ' + str(emrun_options.silence_timeout) + ' seconds. Quitting web server with return code ' + str(emrun_options.timeout_returncode) + '. (--silence_timeout option)')
+        logi('No activity in ' + str(emrun_options.silence_timeout) + ' seconds. Quitting web server with return code ' + str(emrun_options.timeout_returncode) + '. (--silence_timeout option)')
         page_exit_code = emrun_options.timeout_returncode
         emrun_options.kill_on_exit = True
 
@@ -407,7 +412,7 @@ class HTTPWebServer(SocketServer.ThreadingMixIn, BaseHTTPServer.HTTPServer):
       time_since_start = now - page_start_time
       if emrun_options.timeout != 0 and time_since_start > emrun_options.timeout:
         self.shutdown()
-        logv('Page has not finished in ' + str(emrun_options.timeout) + ' seconds. Quitting web server with return code ' + str(emrun_options.timeout_returncode) + '. (--timeout option)')
+        logi('Page has not finished in ' + str(emrun_options.timeout) + ' seconds. Quitting web server with return code ' + str(emrun_options.timeout_returncode) + '. (--timeout option)')
         emrun_options.kill_on_exit = True
         page_exit_code = emrun_options.timeout_returncode
 
@@ -1296,19 +1301,23 @@ def main():
     return
 
   file_to_serve = args[1] if len(args) > 1 else '.'
+  file_to_serve_is_url = file_to_serve.startswith('file://') or file_to_serve.startswith('http://') or file_to_serve.startswith('https://')
   
   if options.serve_root:
     serve_dir = os.path.abspath(options.serve_root)
   else:
-    if file_to_serve == '.': serve_dir = os.path.abspath(file_to_serve)
+    if file_to_serve == '.' or file_to_serve_is_url: serve_dir = os.path.abspath('.')
     else: serve_dir = os.path.dirname(os.path.abspath(file_to_serve))
-  url = os.path.relpath(os.path.abspath(file_to_serve), serve_dir)
-  if len(cmdlineparams) > 0:
-    url += '?' + '&'.join(cmdlineparams)
-  server_root = 'localhost'
-  if options.android:
-    server_root = socket.gethostbyname(socket.gethostname())
-  url = 'http://' + server_root + ':' + str(options.port)+'/'+url
+  if file_to_serve_is_url:
+    url = file_to_serve
+  else:
+    url = os.path.relpath(os.path.abspath(file_to_serve), serve_dir)
+    if len(cmdlineparams) > 0:
+      url += '?' + '&'.join(cmdlineparams)
+    server_root = 'localhost'
+    if options.android:
+      server_root = socket.gethostbyname(socket.gethostname())
+    url = 'http://' + server_root + ':' + str(options.port)+'/'+url
   
   os.chdir(serve_dir)
   if not options.no_server:
