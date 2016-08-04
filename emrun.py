@@ -258,8 +258,6 @@ user_pref("browser.dom.window.dump.enabled", true);
 // Disable background add-ons related update & information check pings
 user_pref("extensions.update.enabled", false);
 user_pref("extensions.getAddons.cache.enabled", false);
-// Throw errors on all JS engine warnings for "strict" mode execution.
-user_pref("javascript.options.werror", true);
 ''')
   f.close()
   logv('create_emrun_safe_firefox_profile: Created new Firefox profile "' + temp_firefox_profile_dir + '"')
