@@ -51,16 +51,6 @@ LINUX = False
 OSX = False
 if os.name == 'nt':
   WINDOWS = True
-  try:
-    import shlex
-    import win32api, _winreg
-    from win32com.client import GetObject
-    from win32api import GetFileVersionInfo, LOWORD, HIWORD
-    from _winreg import HKEY_CURRENT_USER, OpenKey, QueryValue
-  except Exception, e:
-    print >> sys.stderr, str(e)
-    print >> sys.stderr, "Importing Python win32 modules failed! This most likely occurs if you do not have PyWin32 installed! Get it from http://sourceforge.net/projects/pywin32/"
-    sys.exit(1)
 elif platform.system() == 'Linux':
   LINUX = True
 elif platform.mac_ver()[0] != '':
@@ -71,6 +61,23 @@ elif platform.mac_ver()[0] != '':
 # If you are running on an OS that is not any of these, must add explicit support for it.
 if not WINDOWS and not LINUX and not OSX:
   raise Exception("Unknown OS!")
+
+import_win32api_modules_warned_once = False
+
+def import_win32api_modules():
+  try:
+    import shlex
+    import win32api, _winreg
+    from win32com.client import GetObject
+    from win32api import GetFileVersionInfo, LOWORD, HIWORD
+    from _winreg import HKEY_CURRENT_USER, OpenKey, QueryValue
+  except Exception, e:
+    global import_win32api_modules_warned_once
+    if not import_win32api_modules_warned_once:
+      print >> sys.stderr, str(e)
+      print >> sys.stderr, "Importing Python win32 modules failed! This most likely occurs if you do not have PyWin32 installed! Get it from http://sourceforge.net/projects/pywin32/"
+      import_win32api_modules_warned_once = True
+    raise
 
 # Returns wallclock time in seconds.
 def tick():
@@ -518,7 +525,10 @@ class HTTPHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
       have_received_messages = True
     elif path == '/system_info':
       system_info = json.loads(get_system_info(format_json=True))
-      browser_info = json.loads(get_browser_info(browser_exe, format_json=True))
+      try:
+        browser_info = json.loads(get_browser_info(browser_exe, format_json=True))
+      except:
+        browser_info = ''
       data = { 'system': system_info, 'browser': browser_info }
       self.send_response(200)
       self.send_header("Content-type", "application/json")
@@ -578,6 +588,7 @@ def get_cpu_info():
   frequency = 0
   try:
     if WINDOWS:
+      import_win32api_modules()
       root_winmgmts = GetObject("winmgmts:root\cimv2")
       cpus = root_winmgmts.ExecQuery("Select * from Win32_Processor")
       cpu_name = cpus[0].Name + ', ' + platform.processor()
@@ -628,6 +639,11 @@ def win_get_gpu_info():
     for gpu in gpus:
       if gpu['model'] == model: return gpu
     return None
+
+  try:
+    import_win32api_modules()
+  except:
+    return []
 
   for i in range(0, 16):
     try:
@@ -869,6 +885,7 @@ def get_os_version():
   bitness = ' (64bit)' if platform.machine() in ['AMD64', 'x86_64'] else ' (32bit)'
   try:
     if WINDOWS:
+      import_win32api_modules()
       versionHandle = _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion")
       productName = _winreg.QueryValueEx(versionHandle, "ProductName")
 
@@ -935,6 +952,7 @@ def which(program):
   return None
 
 def win_get_default_browser():
+  import_win32api_modules()
   # Look in the registry for the default system browser on Windows without relying on
   # 'start %1' since that method has an issue, see comment below.
   try:
@@ -1368,38 +1386,40 @@ def main():
       options.browser = options.browser.strip()
       if (options.browser.startswith('"') and options.browser.endswith('"')) or (options.browser.startswith("'") and options.browser.endswith("'")):
         options.browser = options.browser[1:-1].strip()
-    browser = find_browser(str(options.browser))
-    if not browser:
-      loge('Unable to find browser "' + str(options.browser) + '"! Check the correctness of the passed --browser=xxx parameter!')
-      return 1
-    browser_exe = browser[0]
-    browser_args = []
 
-    if 'safari' in browser_exe.lower():
-      # Safari has a bug that a command line 'Safari http://page.com' does not launch that page,
-      # but instead launches 'file:///http://page.com'. To remedy this, must use the open -a command
-      # to run Safari, but unfortunately this will end up spawning Safari process detached from emrun.
-      if OSX:
-        browser = ['open', '-a', 'Safari'] + (browser[1:] if len(browser) > 1 else [])
+    if not options.no_browser:
+      browser = find_browser(str(options.browser))
+      if not browser:
+        loge('Unable to find browser "' + str(options.browser) + '"! Check the correctness of the passed --browser=xxx parameter!')
+        return 1
+      browser_exe = browser[0]
+      browser_args = []
 
-      processname_killed_atexit = 'Safari'
-    elif 'chrome' in browser_exe.lower():
-      processname_killed_atexit = 'chrome'
-      browser_args = ['--incognito', '--enable-nacl', '--enable-pnacl', '--disable-restore-session-state', '--enable-webgl', '--no-default-browser-check', '--no-first-run', '--allow-file-access-from-files']
-  #    if options.no_server:
-  #      browser_args += ['--disable-web-security']
-    elif 'firefox' in browser_exe.lower():
-      processname_killed_atexit = 'firefox'
-    elif 'iexplore' in browser_exe.lower():
-      processname_killed_atexit = 'iexplore'
-      browser_args = ['-private']
-    elif 'opera' in browser_exe.lower():
-      processname_killed_atexit = 'opera'
+      if 'safari' in browser_exe.lower():
+        # Safari has a bug that a command line 'Safari http://page.com' does not launch that page,
+        # but instead launches 'file:///http://page.com'. To remedy this, must use the open -a command
+        # to run Safari, but unfortunately this will end up spawning Safari process detached from emrun.
+        if OSX:
+          browser = ['open', '-a', 'Safari'] + (browser[1:] if len(browser) > 1 else [])
 
-    # In Windows cmdline, & character delimits multiple commmands, so must use ^ to escape them.
-    if browser_exe == 'cmd':
-      url = url.replace('&', '^&')
-    browser += browser_args + [url]
+        processname_killed_atexit = 'Safari'
+      elif 'chrome' in browser_exe.lower():
+        processname_killed_atexit = 'chrome'
+        browser_args = ['--incognito', '--enable-nacl', '--enable-pnacl', '--disable-restore-session-state', '--enable-webgl', '--no-default-browser-check', '--no-first-run', '--allow-file-access-from-files']
+    #    if options.no_server:
+    #      browser_args += ['--disable-web-security']
+      elif 'firefox' in browser_exe.lower():
+        processname_killed_atexit = 'firefox'
+      elif 'iexplore' in browser_exe.lower():
+        processname_killed_atexit = 'iexplore'
+        browser_args = ['-private']
+      elif 'opera' in browser_exe.lower():
+        processname_killed_atexit = 'opera'
+
+      # In Windows cmdline, & character delimits multiple commmands, so must use ^ to escape them.
+      if browser_exe == 'cmd':
+        url = url.replace('&', '^&')
+      browser += browser_args + [url]
 
   if options.kill_on_start:
     pname = processname_killed_atexit
