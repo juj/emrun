@@ -4,7 +4,7 @@
 # Usage: emrun <options> filename.html <args to program>
 # See emrun --help for more information
 
-import os, platform, optparse, logging, re, pprint, atexit, urlparse, subprocess, sys, SocketServer, BaseHTTPServer, SimpleHTTPServer, time, string, struct, socket, cgi, tempfile, stat, shutil, json, uuid
+import os, platform, optparse, logging, re, pprint, atexit, urlparse, subprocess, sys, SocketServer, BaseHTTPServer, SimpleHTTPServer, time, string, struct, socket, cgi, tempfile, stat, shutil, json, uuid, shlex
 from operator import itemgetter
 from urllib import unquote
 from Queue import PriorityQueue
@@ -66,11 +66,9 @@ import_win32api_modules_warned_once = False
 
 def import_win32api_modules():
   try:
-    import shlex
+    global win32api, _winreg, GetObject
     import win32api, _winreg
     from win32com.client import GetObject
-    from win32api import GetFileVersionInfo, LOWORD, HIWORD
-    from _winreg import HKEY_CURRENT_USER, OpenKey, QueryValue
   except Exception, e:
     global import_win32api_modules_warned_once
     if not import_win32api_modules_warned_once:
@@ -744,10 +742,10 @@ def get_gpu_info():
 def get_executable_version(filename):
   try:
     if WINDOWS:
-      info = GetFileVersionInfo(filename, "\\")
+      info = win32api.GetFileVersionInfo(filename, "\\")
       ms = info['FileVersionMS']
       ls = info['FileVersionLS']
-      version = HIWORD (ms), LOWORD (ms), HIWORD (ls), LOWORD (ls)
+      version = win32api.HIWORD(ms), win32api.LOWORD(ms), win32api.HIWORD(ls), win32api.LOWORD(ls)
       return '.'.join(map(str, version))
     elif OSX:
       plistfile = filename[0:filename.find('MacOS')] + 'Info.plist'
@@ -956,8 +954,8 @@ def win_get_default_browser():
   # Look in the registry for the default system browser on Windows without relying on
   # 'start %1' since that method has an issue, see comment below.
   try:
-    with OpenKey(HKEY_CURRENT_USER, r"Software\Classes\http\shell\open\command") as key:
-      cmd = QueryValue(key, None)
+    with _winreg.OpenKey(_winreg.HKEY_CURRENT_USER, r"Software\Classes\http\shell\open\command") as key:
+      cmd = _winreg.QueryValue(key, None)
       if cmd:
         parts = shlex.split(cmd)
         if len(parts) > 0:
@@ -1388,7 +1386,7 @@ def main():
       if (options.browser.startswith('"') and options.browser.endswith('"')) or (options.browser.startswith("'") and options.browser.endswith("'")):
         options.browser = options.browser[1:-1].strip()
 
-    if not options.no_browser:
+    if not options.no_browser or options.browser_info:
       browser = find_browser(str(options.browser))
       if not browser:
         loge('Unable to find browser "' + str(options.browser) + '"! Check the correctness of the passed --browser=xxx parameter!')
