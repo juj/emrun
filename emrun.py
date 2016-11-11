@@ -258,11 +258,13 @@ user_pref("toolkit.telemetry.enabled", false);
 user_pref("toolkit.telemetry.unified", false);
 user_pref("datareporting.policy.dataSubmissionEnabled", false);
 user_pref("datareporting.policy.dataSubmissionPolicyBypassNotification", true);
-// Allow window.dump("foo\n") to print directly to console
+// Allow window.dump() to print directly to console
 user_pref("browser.dom.window.dump.enabled", true);
 // Disable background add-ons related update & information check pings
 user_pref("extensions.update.enabled", false);
 user_pref("extensions.getAddons.cache.enabled", false);
+// Enable wasm
+user_pref("javascript.options.wasm", true);
 ''')
   f.close()
   logv('create_emrun_safe_firefox_profile: Created new Firefox profile "' + temp_firefox_profile_dir + '"')
@@ -808,6 +810,7 @@ def win_get_file_properties(fname):
   props = {'FixedFileInfo': None, 'StringFileInfo': None, 'FileVersion': None}
 
   try:
+    import win32api
     # backslash as parm returns dictionary of numeric info corresponding to VS_FIXEDFILEINFO struc
     fixedInfo = win32api.GetFileVersionInfo(fname, '\\')
     props['FixedFileInfo'] = fixedInfo
@@ -1343,7 +1346,7 @@ def main():
       logv('Web server root directory: ' + os.path.abspath('.'))
 
   if options.android:
-    if not options.no_browser:
+    if not options.no_browser or options.browser_info:
       if not options.browser:
         loge("Running on Android requires that you explicitly specify the browser to run with --browser <id>. Run emrun --android --list_browsers to obtain a list of installed browsers you can use.")
         return 1
@@ -1375,9 +1378,9 @@ def main():
       # 4. Type 'aapt d xmltree <packagename>.apk AndroidManifest.xml > manifest.txt' to extract the manifest from the package.
       # 5. Locate the name of the main activity for the browser in manifest.txt and add an entry to above list in form 'appname/mainactivityname'
 
-      if WINDOWS:
-        url = url.replace('&', '\\&')
+      url = url.replace('&', '\\&')
       browser = [ADB, 'shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-n', browser_app, '-d', url]
+      print(str(browser))
       processname_killed_atexit = browser_app[:browser_app.find('/')]
   else: #Launching a web page on local system.
     if options.browser:
@@ -1425,10 +1428,24 @@ def main():
     kill_browser_process()
     processname_killed_atexit = pname
 
+
+  # Copy the profile over to Android.
+  if options.android and options.safe_firefox_profile:
+    profile_dir = create_emrun_safe_firefox_profile()
+    def run(cmd):
+      print str(cmd)
+      subprocess.call(cmd)
+
+    run(['adb', 'shell', 'rm', '-rf', '/mnt/sdcard/safe_firefox_profile'])
+    run(['adb', 'shell', 'mkdir', '/mnt/sdcard/safe_firefox_profile'])
+    run(['adb', 'push', os.path.join(profile_dir, 'prefs.js'), '/mnt/sdcard/safe_firefox_profile/prefs.js'])
+    browser += ['--es', 'args', '"--profile /mnt/sdcard/safe_firefox_profile"']
+
   # Create temporary Firefox profile to run the page with. This is important to run after kill_browser_process()/kill_on_start op above, since that
   # cleans up the temporary profile if one exists.
-  if processname_killed_atexit == 'firefox' and options.safe_firefox_profile and not options.no_browser:
+  if processname_killed_atexit == 'firefox' and options.safe_firefox_profile and not options.no_browser and not options.android:
     profile_dir = create_emrun_safe_firefox_profile()
+
     browser += ['-no-remote', '-profile', profile_dir.replace('\\', '/')]
 
   if options.system_info:
@@ -1437,7 +1454,7 @@ def main():
 
   if options.browser_info:
     if options.android:
-      if option.json:
+      if options.json:
         print json.dumps({
           'browser': 'Android ' + browser_app
           }, indent=2)
@@ -1464,7 +1481,7 @@ def main():
     httpd = HTTPWebServer(('', options.port), HTTPHandler)
 
   if not options.no_browser:
-    logv("Executing %s" % ' '.join(browser))
+    logi("Executing %s" % ' '.join(browser))
     if browser[0] == 'cmd':
       serve_forever = True # Workaround an issue where passing 'cmd /C start' is not able to detect when the user closes the page.
     browser_process = subprocess.Popen(browser, env=subprocess_env())
