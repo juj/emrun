@@ -1112,11 +1112,13 @@ def browser_display_name(browser):
     return 'Google Chrome'
   if 'firefox' in b:
     # Try to identify firefox flavor explicitly, to help show issues where emrun would launch the wrong browser.
-    product_name = win_get_file_properties(browser)['StringFileInfo']['ProductName'] if WINDOWS else 'firefox'
-    if product_name.lower() != 'firefox':
-      return 'Mozilla Firefox ' + product_name
-    else:
-      return 'Mozilla Firefox'
+    try:
+      product_name = win_get_file_properties(browser)['StringFileInfo']['ProductName'] if WINDOWS else 'firefox'
+      if product_name.lower() != 'firefox':
+        return 'Mozilla Firefox ' + product_name
+    except Exception, e:
+      pass
+    return 'Mozilla Firefox'
   if 'opera' in b:
     return 'Opera'
   if 'safari' in b:
