@@ -584,7 +584,7 @@ def main():
     logv('connecting to B2G devtools socket ' + HOST + ':' + str(PORT))
     b2g_socket.connect((HOST, PORT))
   except Exception, e:
-    logv('Got exception ' + str(e) + ', code "' + e[0] + '"')
+    logv('Got exception ' + str(e) + ', code "' + str(e[0]) + '"')
     if e[0] == 61 or e[0] == 107 or e[0] == 111 or e[0] == 'timed out': # 61 == Connection refused and 107+111 == Transport endpoint is not connected
       if (HOST == 'localhost' or HOST == '127.0.0.1') and not connect_to_simulator:
         cmd = [ADB] + ADB_DEVICE + ['forward', 'tcp:'+str(PORT), 'localfilesystem:/data/local/debugger-socket']
