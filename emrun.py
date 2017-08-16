@@ -1208,7 +1208,7 @@ def get_system_info(format_json):
       info += 'UUID: ' + unique_system_id
       return info.strip()
 
-def main():
+def run():
   global browser_process, browser_exe, processname_killed_atexit, emrun_options, emrun_not_enabled_nag_printed, ADB
   usage_str = "usage: emrun [emrun_options] filename.html [html_cmdline_options]\n\n   where emrun_options specifies command line options for emrun itself, whereas\n   html_cmdline_options specifies startup arguments to the program."
   parser = optparse.OptionParser(usage=usage_str)
@@ -1545,9 +1545,12 @@ def main():
 
   return page_exit_code
 
-if __name__ == '__main__':
-  returncode = main()
+def main():
+  returncode = run()
   logv('emrun quitting with process exit code ' + str(returncode))
   if temp_firefox_profile_dir != None:
     logi('Warning: Had to leave behind a temporary Firefox profile directory ' + temp_firefox_profile_dir + ' because --safe_firefox_profile was set and the browser did not quit before emrun did.')
-  sys.exit(returncode)
+  return returncode
+
+if __name__ == '__main__':
+  sys.exit(main())
