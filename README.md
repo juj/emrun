@@ -18,6 +18,6 @@ The tools in this repository are developed with the following areas of focus:
 Documentation
 -------------
 
-Documentation on emrun is currently available here: https://github.com/kripken/emscripten/wiki/Running-html-files-with-emrun
+Documentation on emrun is currently available here: https://kripken.github.io/emscripten-site/docs/compiling/Running-html-files-with-emrun.html
 
 Documentation on ffdb is currently available by running `ffdb --help` after cloning the repository.
