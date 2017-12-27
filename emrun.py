@@ -1321,7 +1321,7 @@ def run():
       break
     i += 1
 
-  options = parser.parse_args(sys.argv)
+  options = parser.parse_args(sys.argv[1:])
   args = options.serve
   emrun_options = options
 
@@ -1348,10 +1348,10 @@ def run():
       list_pc_browsers()
     return
 
-  if len(args) < 2 and (options.system_info or options.browser_info):
+  if len(args) < 1 and (options.system_info or options.browser_info):
     options.no_server = options.no_browser = True # Don't run if only --system_info or --browser_info was passed.
 
-  if len(args) < 2 and not (options.no_server == True and options.no_browser == True):
+  if len(args) < 1 and not (options.no_server == True and options.no_browser == True):
     logi(usage_str)
     logi('')
     logi('Type emrun --help for a detailed list of available options.')
