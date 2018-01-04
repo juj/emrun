@@ -1288,6 +1288,9 @@ def run():
   parser.add_option('--browser', dest='browser', default='',
     help='Specifies the browser executable to run the web page in.')
 
+  parser.add_option('--browser_args', dest='browser_args', default='',
+    help='Specifies the arguments to the browser executable.')
+
   parser.add_option('--android', dest='android', action='store_true', default=False,
     help='Launches the page in a browser of an Android device connected to an USB on the local system. (via adb)')
 
@@ -1434,7 +1437,7 @@ def run():
         loge('Unable to find browser "' + str(options.browser) + '"! Check the correctness of the passed --browser=xxx parameter!')
         return 1
       browser_exe = browser[0]
-      browser_args = []
+      browser_args = shlex.split(options.browser_args)
 
       if 'safari' in browser_exe.lower():
         # Safari has a bug that a command line 'Safari http://page.com' does not launch that page,
