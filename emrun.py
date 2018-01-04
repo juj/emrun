@@ -1449,14 +1449,14 @@ def run():
         processname_killed_atexit = 'Safari'
       elif 'chrome' in browser_exe.lower():
         processname_killed_atexit = 'chrome'
-        browser_args = ['--incognito', '--enable-nacl', '--enable-pnacl', '--disable-restore-session-state', '--enable-webgl', '--no-default-browser-check', '--no-first-run', '--allow-file-access-from-files']
+        browser_args += ['--incognito', '--enable-nacl', '--enable-pnacl', '--disable-restore-session-state', '--enable-webgl', '--no-default-browser-check', '--no-first-run', '--allow-file-access-from-files']
     #    if options.no_server:
     #      browser_args += ['--disable-web-security']
       elif 'firefox' in browser_exe.lower():
         processname_killed_atexit = 'firefox'
       elif 'iexplore' in browser_exe.lower():
         processname_killed_atexit = 'iexplore'
-        browser_args = ['-private']
+        browser_args += ['-private']
       elif 'opera' in browser_exe.lower():
         processname_killed_atexit = 'opera'
 
