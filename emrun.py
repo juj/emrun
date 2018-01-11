@@ -285,6 +285,8 @@ user_pref("extensions.update.enabled", false);
 user_pref("extensions.getAddons.cache.enabled", false);
 // Enable wasm
 user_pref("javascript.options.wasm", true);
+// Enable SharedArrayBuffer (this profile is for a testing environment, so Spectre/Meltdown don't apply)
+user_pref("javascript.options.shared_memory", true);
 ''')
   f.close()
   logv('create_emrun_safe_firefox_profile: Created new Firefox profile "' + temp_firefox_profile_dir + '"')
