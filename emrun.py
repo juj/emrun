@@ -602,6 +602,14 @@ class HTTPHandler(SimpleHTTPRequestHandler):
     self.end_headers()
     self.wfile.write('OK')
 
+# Returns stdout by running command with universal_newlines=True
+def check_output(cmd, universal_newlines=True, *args, **kwargs):
+  if hasattr(subprocess, "run"):
+    return subprocess.run(cmd, universal_newlines=universal_newlines, stdout=subprocess.PIPE, check=True, *args, **kwargs).stdout
+  else:
+    # check_output is considered as an old API so prefer subprocess.run if possible
+    return subprocess.check_output(cmd, universal_newlines=universal_newlines, *args, **kwargs)
+
 # From http://stackoverflow.com/questions/4842448/getting-processor-information-in-python
 # Returns a string with something like "AMD64, Intel(R) Core(TM) i5-2557M CPU @ 1.70GHz, Intel64 Family 6 Model 42 Stepping 7, GenuineIntel"
 def get_cpu_info():
@@ -614,20 +622,20 @@ def get_cpu_info():
       root_winmgmts = GetObject("winmgmts:root\cimv2")
       cpus = root_winmgmts.ExecQuery("Select * from Win32_Processor")
       cpu_name = cpus[0].Name + ', ' + platform.processor()
-      physical_cores = int(subprocess.check_output(['wmic', 'cpu', 'get', 'NumberOfCores']).split(b'\n')[1].strip())
-      logical_cores = int(subprocess.check_output(['wmic', 'cpu', 'get', 'NumberOfLogicalProcessors']).split(b'\n')[1].strip())
-      frequency = int(subprocess.check_output(['wmic', 'cpu', 'get', 'MaxClockSpeed']).split(b'\n')[1].strip())
+      physical_cores = int(check_output(['wmic', 'cpu', 'get', 'NumberOfCores']).split('\n')[1].strip())
+      logical_cores = int(check_output(['wmic', 'cpu', 'get', 'NumberOfLogicalProcessors']).split('\n')[1].strip())
+      frequency = int(check_output(['wmic', 'cpu', 'get', 'MaxClockSpeed']).split('\n')[1].strip())
     elif OSX:
-      cpu_name = subprocess.check_output(['sysctl', '-n', 'machdep.cpu.brand_string']).strip()
-      physical_cores = int(subprocess.check_output(['sysctl', '-n', 'machdep.cpu.core_count']).strip())
-      logical_cores = int(subprocess.check_output(['sysctl', '-n', 'machdep.cpu.thread_count']).strip())
-      frequency = int(subprocess.check_output(['sysctl', '-n', 'hw.cpufrequency']).strip()) / 1000000
+      cpu_name = check_output(['sysctl', '-n', 'machdep.cpu.brand_string']).strip()
+      physical_cores = int(check_output(['sysctl', '-n', 'machdep.cpu.core_count']).strip())
+      logical_cores = int(check_output(['sysctl', '-n', 'machdep.cpu.thread_count']).strip())
+      frequency = int(check_output(['sysctl', '-n', 'hw.cpufrequency']).strip()) / 1000000
     elif LINUX:
-      all_info = subprocess.check_output(['cat', '/proc/cpuinfo']).strip()
+      all_info = check_output(['cat', '/proc/cpuinfo']).strip()
       for line in all_info.split("\n"):
         if "model name" in line:
           cpu_name = re.sub( ".*model name.*:", "", line, 1).strip()
-      lscpu = subprocess.check_output(['lscpu'])
+      lscpu = check_output(['lscpu'])
       frequency = int(float(re.search('CPU MHz: (.*)', lscpu).group(1).strip()) + 0.5)
       sockets = int(re.search('Socket\(s\): (.*)', lscpu).group(1).strip())
       physical_cores = sockets * int(re.search('Core\(s\) per socket: (.*)', lscpu).group(1).strip())
@@ -648,7 +656,7 @@ def get_cpu_info():
     }
 
 def get_android_cpu_infoline():
-  lines = subprocess.check_output([ADB, 'shell', 'cat', '/proc/cpuinfo']).split('\n')
+  lines = check_output([ADB, 'shell', 'cat', '/proc/cpuinfo']).split('\n')
   processor = ''
   hardware = ''
   for line in lines:
@@ -657,7 +665,7 @@ def get_android_cpu_infoline():
     elif line.startswith('Hardware'):
       hardware = line[line.find(':')+1:].strip()
 
-  freq = int(subprocess.check_output([ADB, 'shell', 'cat', '/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq']).strip())/1000
+  freq = int(check_output([ADB, 'shell', 'cat', '/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq']).strip())/1000
   return 'CPU: ' + processor + ', ' + hardware + ' @ ' + str(freq) + ' MHz'
 
 def win_get_gpu_info():
@@ -718,7 +726,7 @@ def win_get_gpu_info():
 def linux_get_gpu_info():
   glinfo = ''
   try:
-    glxinfo = subprocess.check_output('glxinfo')
+    glxinfo = check_output('glxinfo')
     for line in glxinfo.split("\n"):
       if "OpenGL vendor string:" in line: gl_vendor = line[len("OpenGL vendor string:"):].strip()
       if "OpenGL version string:" in line: gl_version = line[len("OpenGL version string:"):].strip()
@@ -729,7 +737,7 @@ def linux_get_gpu_info():
 
   adapterinfo = ''
   try:
-    vgainfo = subprocess.check_output(['lshw', '-C', 'display'], stderr=subprocess.PIPE)
+    vgainfo = check_output(['lshw', '-C', 'display'], stderr=subprocess.PIPE)
     vendor = re.search("vendor: (.*)", vgainfo).group(1).strip()
     product = re.search("product: (.*)", vgainfo).group(1).strip()
     description = re.search("description: (.*)", vgainfo).group(1).strip()
@@ -740,7 +748,7 @@ def linux_get_gpu_info():
 
   ram = 0
   try:
-    vgainfo = subprocess.check_output('lspci -v -s $(lspci | grep VGA | cut -d " " -f 1)', shell=True, stderr=subprocess.PIPE)
+    vgainfo = check_output('lspci -v -s $(lspci | grep VGA | cut -d " " -f 1)', shell=True, stderr=subprocess.PIPE)
     ram = int(re.search("\[size=([0-9]*)M\]", vgainfo).group(1)) * 1024 * 1024
   except Exception as e:
     logv(e)
@@ -752,7 +760,7 @@ def linux_get_gpu_info():
 def osx_get_gpu_info():
   gpus = []
   try:
-    info = subprocess.check_output(['system_profiler', 'SPDisplaysDataType'])
+    info = check_output(['system_profiler', 'SPDisplaysDataType'])
     info = info.split("Chipset Model:")[1:]
     for gpu in info:
       model_name = gpu.split('\n')[0].strip()
@@ -789,7 +797,7 @@ def get_executable_version(filename):
         return info['CFBundleShortVersionString']
     elif LINUX:
       if 'firefox' in filename.lower():
-        version = subprocess.check_output([filename, '-v'])
+        version = check_output([filename, '-v'])
         version = version.replace('Mozilla Firefox ', '')
         return version.strip()
       else:
@@ -877,34 +885,34 @@ def get_computer_model():
 
       try:
         # http://apple.stackexchange.com/questions/98080/can-a-macs-model-year-be-determined-via-terminal-command
-        serial = subprocess.check_output(['system_profiler', 'SPHardwareDataType'])
+        serial = check_output(['system_profiler', 'SPHardwareDataType'])
         serial = re.search("Serial Number (.*): (.*)", serial)
         serial = serial.group(2).strip()[-4:]
         cmd = ['curl', '-s', 'http://support-sp.apple.com/sp/product?cc=' + serial]
         logv(str(cmd))
-        model = subprocess.check_output(cmd)
+        model = check_output(cmd)
         model = re.search('<configCode>(.*)</configCode>', model)
         model = model.group(1).strip()
         open(os.path.join(os.getenv("HOME"), '.emrun.hwmodel.cached'), 'w').write(model) # Cache the hardware model to disk
         return model
       except:
-        hwmodel = subprocess.check_output(['sysctl', 'hw.model'])
+        hwmodel = check_output(['sysctl', 'hw.model'])
         hwmodel = re.search('hw.model: (.*)', hwmodel).group(1).strip()
         return hwmodel
     elif WINDOWS:
-      manufacturer = subprocess.check_output(['wmic', 'baseboard', 'get', 'manufacturer']).split('\n')[1].strip()
-      version = subprocess.check_output(['wmic', 'baseboard', 'get', 'version']).split('\n')[1].strip()
-      product = subprocess.check_output(['wmic', 'baseboard', 'get', 'product']).split('\n')[1].strip()
+      manufacturer = check_output(['wmic', 'baseboard', 'get', 'manufacturer']).split('\n')[1].strip()
+      version = check_output(['wmic', 'baseboard', 'get', 'version']).split('\n')[1].strip()
+      product = check_output(['wmic', 'baseboard', 'get', 'product']).split('\n')[1].strip()
       if 'Apple' in manufacturer: return manufacturer + ' ' + version + ', ' + product
       else: return manufacturer + ' ' + product + ', ' + version
     elif LINUX:
-      board_vendor = subprocess.check_output(['cat', '/sys/devices/virtual/dmi/id/board_vendor']).strip()
-      board_name = subprocess.check_output(['cat', '/sys/devices/virtual/dmi/id/board_name']).strip()
-      board_version = subprocess.check_output(['cat', '/sys/devices/virtual/dmi/id/board_version']).strip()
+      board_vendor = check_output(['cat', '/sys/devices/virtual/dmi/id/board_vendor']).strip()
+      board_name = check_output(['cat', '/sys/devices/virtual/dmi/id/board_name']).strip()
+      board_version = check_output(['cat', '/sys/devices/virtual/dmi/id/board_version']).strip()
 
-      bios_vendor = subprocess.check_output(['cat', '/sys/devices/virtual/dmi/id/bios_vendor']).strip()
-      bios_version = subprocess.check_output(['cat', '/sys/devices/virtual/dmi/id/bios_version']).strip()
-      bios_date = subprocess.check_output(['cat', '/sys/devices/virtual/dmi/id/bios_date']).strip()
+      bios_vendor = check_output(['cat', '/sys/devices/virtual/dmi/id/bios_vendor']).strip()
+      bios_version = check_output(['cat', '/sys/devices/virtual/dmi/id/bios_version']).strip()
+      bios_date = check_output(['cat', '/sys/devices/virtual/dmi/id/bios_date']).strip()
       return board_vendor + ' ' + board_name + ' ' + board_version + ', ' + bios_vendor + ' ' + bios_version + ' (' + bios_date + ')'
   except Exception as e:
     logv(str(e))
@@ -920,14 +928,14 @@ def get_os_version():
 
       version = ''
       try:
-        version = ' ' + subprocess.check_output(['wmic', 'os', 'get', 'version']).split('\n')[1].strip()
+        version = ' ' + check_output(['wmic', 'os', 'get', 'version']).split('\n')[1].strip()
       except:
         pass
       return productName[0] + version + bitness
     elif OSX:
       return 'Mac OS ' + platform.mac_ver()[0] + bitness
     elif LINUX:
-      kernel_version = subprocess.check_output(['uname', '-r']).strip()
+      kernel_version = check_output(['uname', '-r']).strip()
       return ' '.join(platform.linux_distribution()) + ', linux kernel ' + kernel_version + ' ' + platform.architecture()[0] + bitness
   except:
     return 'Unknown OS'
@@ -938,7 +946,7 @@ def get_system_memory():
   try:
     if LINUX or emrun_options.android:
       if emrun_options.android:
-        lines = subprocess.check_output([ADB, 'shell', 'cat', '/proc/meminfo']).split('\n')
+        lines = check_output([ADB, 'shell', 'cat', '/proc/meminfo']).split('\n')
       else:
         mem = open('/proc/meminfo', 'r')
         lines = mem.readlines()
@@ -950,7 +958,7 @@ def get_system_memory():
     elif WINDOWS:
       return win32api.GlobalMemoryStatusEx()['TotalPhys']
     elif OSX:
-      return int(subprocess.check_output(['sysctl', '-n', 'hw.memsize']).strip())
+      return int(check_output(['sysctl', '-n', 'hw.memsize']).strip())
   except:
     return -1
 
@@ -1065,32 +1073,32 @@ def find_browser(name):
 
 def get_android_model():
   global ADB
-  manufacturer = subprocess.check_output([ADB, 'shell', 'getprop', 'ro.product.manufacturer']).strip()
-  brand = subprocess.check_output([ADB, 'shell', 'getprop', 'ro.product.brand']).strip()
-  model = subprocess.check_output([ADB, 'shell', 'getprop', 'ro.product.model']).strip()
-  board = subprocess.check_output([ADB, 'shell', 'getprop', 'ro.product.board']).strip()
-  device = subprocess.check_output([ADB, 'shell', 'getprop', 'ro.product.device']).strip()
-  name = subprocess.check_output([ADB, 'shell', 'getprop', 'ro.product.name']).strip()
+  manufacturer = check_output([ADB, 'shell', 'getprop', 'ro.product.manufacturer']).strip()
+  brand = check_output([ADB, 'shell', 'getprop', 'ro.product.brand']).strip()
+  model = check_output([ADB, 'shell', 'getprop', 'ro.product.model']).strip()
+  board = check_output([ADB, 'shell', 'getprop', 'ro.product.board']).strip()
+  device = check_output([ADB, 'shell', 'getprop', 'ro.product.device']).strip()
+  name = check_output([ADB, 'shell', 'getprop', 'ro.product.name']).strip()
   return manufacturer + ' ' + brand + ' ' + model + ' ' + board + ' ' + device + ' ' + name
 
 def get_android_os_version():
   global ADB
-  ver = subprocess.check_output([ADB, 'shell', 'getprop', 'ro.build.version.release']).strip()
-  apiLevel = subprocess.check_output([ADB, 'shell', 'getprop', 'ro.build.version.sdk']).strip()
+  ver = check_output([ADB, 'shell', 'getprop', 'ro.build.version.release']).strip()
+  apiLevel = check_output([ADB, 'shell', 'getprop', 'ro.build.version.sdk']).strip()
   if not apiLevel:
-    apiLevel = subprocess.check_output([ADB, 'shell', 'getprop', 'ro.build.version.sdk_int']).strip()
+    apiLevel = check_output([ADB, 'shell', 'getprop', 'ro.build.version.sdk_int']).strip()
 
   os = ''
   if ver:
     os += 'Android ' + ver + ' '
   if apiLevel:
     os += 'SDK API Level ' + apiLevel + ' '
-  os += subprocess.check_output([ADB, 'shell', 'getprop', 'ro.build.description']).strip()
+  os += check_output([ADB, 'shell', 'getprop', 'ro.build.description']).strip()
   return os
 
 def list_android_browsers():
   global ADB
-  apps = subprocess.check_output([ADB, 'shell', 'pm', 'list', 'packages', '-f']).replace('\r\n', '\n')
+  apps = check_output([ADB, 'shell', 'pm', 'list', 'packages', '-f']).replace('\r\n', '\n')
   browsers = []
   for line in apps.split('\n'):
     line = line.strip()
