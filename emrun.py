@@ -629,7 +629,7 @@ def get_cpu_info():
       cpu_name = check_output(['sysctl', '-n', 'machdep.cpu.brand_string']).strip()
       physical_cores = int(check_output(['sysctl', '-n', 'machdep.cpu.core_count']).strip())
       logical_cores = int(check_output(['sysctl', '-n', 'machdep.cpu.thread_count']).strip())
-      frequency = int(check_output(['sysctl', '-n', 'hw.cpufrequency']).strip()) / 1000000
+      frequency = int(check_output(['sysctl', '-n', 'hw.cpufrequency']).strip()) // 1000000
     elif LINUX:
       all_info = check_output(['cat', '/proc/cpuinfo']).strip()
       for line in all_info.split("\n"):
@@ -665,7 +665,7 @@ def get_android_cpu_infoline():
     elif line.startswith('Hardware'):
       hardware = line[line.find(':')+1:].strip()
 
-  freq = int(check_output([ADB, 'shell', 'cat', '/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq']).strip())/1000
+  freq = int(check_output([ADB, 'shell', 'cat', '/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq']).strip())//1000
   return 'CPU: ' + processor + ', ' + hardware + ' @ ' + str(freq) + ' MHz'
 
 def win_get_gpu_info():
@@ -1198,7 +1198,7 @@ def get_system_info(format_json):
           }, indent=2)
     else:
       info = 'Model: ' + get_android_model() + '\n'
-      info += 'OS: ' + get_android_os_version() + ' with ' + str(get_system_memory()/1024/1024) + ' MB of System RAM\n'
+      info += 'OS: ' + get_android_os_version() + ' with ' + str(get_system_memory()//1024//1024) + ' MB of System RAM\n'
       info += 'CPU: ' + get_android_cpu_infoline() + '\n'
       return info.strip()
   else:
@@ -1227,13 +1227,13 @@ def get_system_info(format_json):
       gpus = get_gpu_info()
       info = 'Computer name: ' + socket.gethostname() + '\n' # http://stackoverflow.com/questions/799767/getting-name-of-windows-computer-running-python-script
       info += 'Model: ' + get_computer_model() + '\n'
-      info += 'OS: ' + get_os_version() + ' with ' + str(get_system_memory()/1024/1024) + ' MB of System RAM\n'
+      info += 'OS: ' + get_os_version() + ' with ' + str(get_system_memory()//1024//1024) + ' MB of System RAM\n'
       info += 'CPU: ' + cpu['model'] + ', ' + str(cpu['frequency']) + ' MHz, ' + str(cpu['physicalCores']) + ' physical cores, ' + str(cpu['logicalCores']) + ' logical cores\n';
       if len(gpus) == 1:
-        info += "GPU: " + gpus[0]['model'] + " with " + str(gpus[0]['ram']/1024/1024) + " MB of VRAM\n"
+        info += "GPU: " + gpus[0]['model'] + " with " + str(gpus[0]['ram']//1024//1024) + " MB of VRAM\n"
       elif len(gpus) > 1:
         for i in range(0, len(gpus)):
-          info += "GPU"+str(i)+ ": " + gpus[i]['model'] + " with " + str(gpus[i]['ram']/1024/1024) + " MBs of VRAM\n"
+          info += "GPU"+str(i)+ ": " + gpus[i]['model'] + " with " + str(gpus[i]['ram']//1024//1024) + " MBs of VRAM\n"
       info += 'UUID: ' + unique_system_id
       return info.strip()
 
