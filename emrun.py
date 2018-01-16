@@ -1379,7 +1379,7 @@ def run():
     logi('Type emrun --help for a detailed list of available options.')
     return
 
-  file_to_serve = args[1] if len(args) > 1 else '.'
+  file_to_serve = args[0] if len(args) > 0 else '.'
   file_to_serve_is_url = file_to_serve.startswith('file://') or file_to_serve.startswith('http://') or file_to_serve.startswith('https://')
   
   if options.serve_root:
