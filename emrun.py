@@ -1328,7 +1328,7 @@ def run():
 
   parser.add_argument('serve', nargs='*')
 
-  opts_with_param = ['--browser', '--timeout_returncode', '--timeout', '--silence_timeout', '--log_stderr', '--log_stdout', '--hostname', '--port', '--serve_root']
+  opts_with_param = ['--browser', '--browser_args', '--timeout_returncode', '--timeout', '--silence_timeout', '--log_stderr', '--log_stdout', '--hostname', '--port', '--serve_root']
 
   cmdlineparams = []
   # Split the startup arguments to two parts, delimited by the first (unbound) positional argument.
