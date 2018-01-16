@@ -1239,6 +1239,13 @@ def get_system_info(format_json):
       info += 'UUID: ' + unique_system_id
       return info.strip()
 
+# Be resilient to quotes and whitespace
+def unwrap(s):
+  s = s.strip()
+  if (s.startswith('"') and s.endswith('"')) or (s.startswith("'") and s.endswith("'")):
+    s = s[1:-1].strip()
+  return s
+
 def run():
   global browser_process, browser_exe, processname_killed_atexit, emrun_options, emrun_not_enabled_nag_printed, ADB
   usage_str = "emrun [emrun_options] filename.html [html_cmdline_options]\n\n   where emrun_options specifies command line options for emrun itself, whereas\n   html_cmdline_options specifies startup arguments to the program."
@@ -1439,10 +1446,7 @@ def run():
       processname_killed_atexit = browser_app[:browser_app.find('/')]
   else: #Launching a web page on local system.
     if options.browser:
-      # Be resilient to quotes and whitespace
-      options.browser = options.browser.strip()
-      if (options.browser.startswith('"') and options.browser.endswith('"')) or (options.browser.startswith("'") and options.browser.endswith("'")):
-        options.browser = options.browser[1:-1].strip()
+      options.browser = unwrap(options.browser)
 
     if not options.no_browser or options.browser_info:
       browser = find_browser(str(options.browser))
@@ -1450,7 +1454,7 @@ def run():
         loge('Unable to find browser "' + str(options.browser) + '"! Check the correctness of the passed --browser=xxx parameter!')
         return 1
       browser_exe = browser[0]
-      browser_args = shlex.split(options.browser_args)
+      browser_args = shlex.split(unwrap(options.browser_args))
 
       if 'safari' in browser_exe.lower():
         # Safari has a bug that a command line 'Safari http://page.com' does not launch that page,
