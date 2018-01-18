@@ -454,7 +454,7 @@ class HTTPWebServer(socketserver.ThreadingMixIn, HTTPServer):
     self.print_all_messages()
 
   def handle_error(self, request, client_address):
-    err = sys.exc_info()[1][0]
+    err = sys.exc_info()[1].args[0]
     # Filter out the useless '[Errno 10054] An existing connection was forcibly closed by the remote host' errors that occur when we
     # forcibly kill the client.
     if err != 10054:
