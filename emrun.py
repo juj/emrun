@@ -1530,12 +1530,12 @@ def run():
 
   global browser_stdout_handle, browser_stderr_handle
   if options.log_stdout:
-    browser_stdout_handle = open(options.log_stdout, 'ab')
+    browser_stdout_handle = open(options.log_stdout, 'a')
   if options.log_stderr:
     if options.log_stderr == options.log_stdout:
       browser_stderr_handle = browser_stdout_handle
     else:
-      browser_stderr_handle = open(options.log_stderr, 'ab')
+      browser_stderr_handle = open(options.log_stderr, 'a')
 
   if not options.no_server:
     logv('Starting web server: http://%s:%i/' % (options.hostname, options.port))
