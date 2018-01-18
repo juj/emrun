@@ -602,7 +602,7 @@ class HTTPHandler(SimpleHTTPRequestHandler):
     self.send_header('Connection','close')
     self.send_header('Expires','-1')
     self.end_headers()
-    self.wfile.write('OK')
+    self.wfile.write(b'OK')
 
 # Returns stdout by running command with universal_newlines=True
 def check_output(cmd, universal_newlines=True, *args, **kwargs):
