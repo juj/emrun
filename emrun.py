@@ -564,6 +564,8 @@ class HTTPHandler(SimpleHTTPRequestHandler):
       return
     else:
       data = self.rfile.read(int(self.headers['Content-Length']))
+      if str is not bytes and isinstance(data, bytes):
+        data = data.decode('utf-8')
       data = data.replace("+", " ")
       data = unquote_u(data)
 
