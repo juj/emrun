@@ -63,7 +63,7 @@ ADB = ''
 # Host OS detection to autolocate browsers and other OS-specific support needs.
 WINDOWS = False
 LINUX = False
-OSX = False
+MACOS = False
 if os.name == 'nt':
   WINDOWS = True
 elif platform.system() == 'Linux':
