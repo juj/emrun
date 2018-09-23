@@ -52,7 +52,9 @@ page_exit_code = 0
 processname_killed_atexit = ""
 
 # If user does not specify a --hostname parameter, this hostname is used to launch the server.
-default_webserver_hostname = "localhost"
+# Using "0.0.0.0" means "all interfaces", which should allow connecting to this server via LAN
+# addresses. Using "localhost" should allow only connecting from local computer
+default_webserver_hostname = socket.gethostbyname(socket.gethostname())
 
 # If user does not specify a --port parameter, this port is used to launch the server.
 default_webserver_port = 6931
@@ -1385,8 +1387,7 @@ def run():
     url = os.path.relpath(os.path.abspath(file_to_serve), serve_dir)
     if len(cmdlineparams):
       url += '?' + '&'.join(cmdlineparams)
-    hostname = socket.gethostbyname(socket.gethostname()) if options.android else options.hostname
-    url = 'http://' + hostname + ':' + str(options.port)+'/'+url
+    url = 'http://' + options.hostname + ':' + str(options.port)+'/'+url
 
   os.chdir(serve_dir)
   if not options.no_server:
