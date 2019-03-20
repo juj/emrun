@@ -219,7 +219,7 @@ user_pref("browser.sessionstore.resume_from_crash", false);
 user_pref("services.sync.prefs.sync.browser.sessionstore.restore_on_demand", false);
 user_pref("browser.sessionstore.restore_on_demand", false);
 user_pref("browser.sessionstore.max_resumed_crashes", -1);
-user_pref("toolkip.startup.max_resumed_crashes", -1);
+user_pref("toolkit.startup.max_resumed_crashes", -1);
 // Don't show the slow script dialog popup
 user_pref("dom.max_script_run_time", 0);
 user_pref("dom.max_chrome_script_run_time", 0);
