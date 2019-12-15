@@ -330,7 +330,7 @@ user_pref("javascript.options.wasm", true);
 // Enable SharedArrayBuffer (this profile is for a testing environment, so Spectre/Meltdown don't apply)
 user_pref("javascript.options.shared_memory", true);
 ''')
-    if not emrun_options.private_browsing:
+    if emrun_options.private_browsing:
       f.write('''
 // Start in private browsing mode to not cache anything to disk (everything will be wiped anyway after this run)
 user_pref("browser.privatebrowsing.autostart", true);
@@ -474,7 +474,7 @@ class HTTPWebServer(socketserver.ThreadingMixIn, HTTPServer):
     while self.is_running:
       now = tick()
       # Did user close browser?
-      if not is_browser_process_alive():
+      if not emrun_options.no_browser and not is_browser_process_alive():
         delete_emrun_safe_firefox_profile()
         if not emrun_options.serve_after_close:
           self.is_running = False
@@ -1372,7 +1372,7 @@ def list_process_ids_by_name(exe_full_path):
         pinfo = proc.as_dict(attrs=['pid', 'name', 'exe'])
         #if process_name.lower() in pinfo['name'].lower():
         if pinfo['exe'].lower().replace('\\', '/') == exe_full_path.lower().replace('\\', '/'):
-          pids.append(pinfo)
+          pids.append(pinfo['pid'])
       except Exception as e:
         pass
   except Exception as e:
@@ -1618,7 +1618,7 @@ def run():
       elif 'chrome' in browser_exe.lower():
         processname_killed_atexit = 'chrome'
         browser_args += ['--enable-nacl', '--enable-pnacl', '--disable-restore-session-state', '--enable-webgl', '--no-default-browser-check', '--no-first-run', '--allow-file-access-from-files']
-        if not options.private_browsing:
+        if options.private_browsing:
           browser_args += ['--incognito']
     #    if options.no_server:
     #      browser_args += ['--disable-web-security']
@@ -1626,7 +1626,7 @@ def run():
         processname_killed_atexit = 'firefox'
       elif 'iexplore' in browser_exe.lower():
         processname_killed_atexit = 'iexplore'
-        if not options.private_browsing:
+        if options.private_browsing:
           browser_args += ['-private']
       elif 'opera' in browser_exe.lower():
         processname_killed_atexit = 'opera'
