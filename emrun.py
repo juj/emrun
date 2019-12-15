@@ -504,7 +504,7 @@ class HTTPWebServer(socketserver.ThreadingMixIn, HTTPServer):
       if not emrun_not_enabled_nag_printed and page_last_served_time is not None:
         time_since_page_serve = now - page_last_served_time
         if not have_received_messages and time_since_page_serve > 10:
-          logi('The html page you are running is not emrun-capable. Stdout, stderr and exit(returncode) capture will not work. Recompile the application with the --emrun linker flag to enable this, or pass --no_emrun_detect to emrun to hide this check.')
+          logv('The html page you are running is not emrun-capable. Stdout, stderr and exit(returncode) capture will not work. Recompile the application with the --emrun linker flag to enable this, or pass --no_emrun_detect to emrun to hide this check.')
           emrun_not_enabled_nag_printed = True
 
     # Clean up at quit, print any leftover messages in queue.
@@ -534,7 +534,7 @@ class HTTPHandler(SimpleHTTPRequestHandler):
     # A browser has navigated to this page - check which PID got spawned for the browser
     global previous_browser_process_pids, current_browser_process_pids, navigation_has_occurred
     if not navigation_has_occurred and current_browser_process_pids == None:
-      running_browser_process_pids = list_process_ids_by_name(browser_exe)
+      running_browser_process_pids = list_processes_by_name(browser_exe)
       for p in running_browser_process_pids:
         def pid_existed(pid):
           for proc in previous_browser_process_pids:
@@ -1363,7 +1363,7 @@ def unwrap(s):
   return s
 
 
-def list_process_ids_by_name(exe_full_path):
+def list_processes_by_name(exe_full_path):
   pids = []
   try:
     import psutil
@@ -1372,7 +1372,7 @@ def list_process_ids_by_name(exe_full_path):
         pinfo = proc.as_dict(attrs=['pid', 'name', 'exe'])
         #if process_name.lower() in pinfo['name'].lower():
         if pinfo['exe'].lower().replace('\\', '/') == exe_full_path.lower().replace('\\', '/'):
-          pids.append(pinfo['pid'])
+          pids.append(pinfo)
       except Exception as e:
         pass
   except Exception as e:
@@ -1535,7 +1535,7 @@ def run():
     if file_to_serve == '.' or file_to_serve_is_url:
       serve_dir = os.path.abspath('.')
     else:
-     serve_dir = os.path.dirname(os.path.abspath(file_to_serve))
+     serve_dir = file_to_serve if (file_to_serve.endswith('/') or file_to_serve.endswith('\\') or os.path.isdir(file_to_serve)) else os.path.dirname(os.path.abspath(file_to_serve))
   if file_to_serve_is_url:
     url = file_to_serve
   else:
@@ -1697,7 +1697,7 @@ def run():
     #   Workaround an issue where passing 'cmd /C start' is not able to detect when the user closes the page.
     #   serve_forever = True
     global previous_browser_process_pids
-    previous_browser_process_pids = list_process_ids_by_name(browser[0])
+    previous_browser_process_pids = list_processes_by_name(browser[0])
     browser_process = subprocess.Popen(browser, env=subprocess_env())
     if options.kill_on_exit:
       atexit.register(kill_browser_process)
