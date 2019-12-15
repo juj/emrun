@@ -81,8 +81,8 @@ page_exit_code = 0
 processname_killed_atexit = ""
 
 # Using "0.0.0.0" means "all interfaces", which should allow connecting to this server via LAN
-# addresses. Using "localhost" should allow only connecting from local computer
-default_webserver_hostname = socket.gethostbyname(socket.gethostname())
+# addresses. Using "localhost" should allow only connecting from local computer.
+default_webserver_hostname = '0.0.0.0'
 
 # If user does not specify a --port parameter, this port is used to launch the server.
 default_webserver_port = 6931
