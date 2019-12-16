@@ -533,7 +533,7 @@ class HTTPHandler(SimpleHTTPRequestHandler):
 
     # A browser has navigated to this page - check which PID got spawned for the browser
     global previous_browser_process_pids, current_browser_process_pids, navigation_has_occurred
-    if not navigation_has_occurred and current_browser_process_pids == None:
+    if not navigation_has_occurred and current_browser_process_pids is None:
       running_browser_process_pids = list_processes_by_name(browser_exe)
       for p in running_browser_process_pids:
         def pid_existed(pid):
@@ -1370,12 +1370,11 @@ def list_processes_by_name(exe_full_path):
     for proc in psutil.process_iter():
       try:
         pinfo = proc.as_dict(attrs=['pid', 'name', 'exe'])
-        #if process_name.lower() in pinfo['name'].lower():
         if pinfo['exe'].lower().replace('\\', '/') == exe_full_path.lower().replace('\\', '/'):
           pids.append(pinfo)
-      except Exception as e:
+      except Exception:
         pass
-  except Exception as e:
+  except Exception:
     pass
 
   return pids
@@ -1634,6 +1633,7 @@ def run():
       # In Windows cmdline, & character delimits multiple commmands, so must use ^ to escape them.
       if browser_exe == 'cmd':
         url = url.replace('&', '^&')
+      url = url.replace('0.0.0.0', 'localhost')
       browser += browser_args + [url]
 
   if options.kill_on_start:
@@ -1659,7 +1659,7 @@ def run():
   if processname_killed_atexit == 'firefox' and options.safe_firefox_profile and not options.no_browser and not options.android:
     profile_dir = create_emrun_safe_firefox_profile()
 
-    browser += ['-no-remote', '-profile', profile_dir.replace('\\', '/')]
+    browser += ['-no-remote', '--profile', profile_dir.replace('\\', '/')]
 
   if options.system_info:
     logi('Time of run: ' + time.strftime("%x %X"))
