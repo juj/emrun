@@ -249,8 +249,6 @@ def create_emrun_safe_firefox_profile():
   temp_firefox_profile_dir = tempfile.mkdtemp(prefix='temp_emrun_firefox_profile_')
   with open(os.path.join(temp_firefox_profile_dir, 'prefs.js'), 'w') as f:
     f.write('''
-// Lift the default max 20 workers limit to something higher to avoid hangs when page needs to spawn a lot of threads.
-user_pref("dom.workers.maxPerDomain", 100);
 // Always allow opening popups
 user_pref("browser.popups.showPopupBlocker", false);
 user_pref("dom.disable_open_during_load", false);
