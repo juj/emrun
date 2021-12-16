@@ -692,12 +692,11 @@ class HTTPHandler(SimpleHTTPRequestHandler):
       # "stdio.html?file=filename" will write binary data to the given file.
       data = self.rfile.read(int(self.headers['Content-Length']))
       filename = query[len('file='):]
-      dump_out_directory = 'dump_out'
       try:
-        os.mkdir(dump_out_directory)
+        os.mkdir(emrun_options.dump_out_directory)
       except OSError:
         pass
-      filename = os.path.join(dump_out_directory, os.path.normpath(filename))
+      filename = os.path.join(emrun_options.dump_out_directory, os.path.normpath(filename))
       open(filename, 'wb').write(data)
       logi('Wrote ' + str(len(data)) + ' bytes to file "' + filename + '".')
       have_received_messages = True
@@ -1574,6 +1573,9 @@ to emrun itself and arguments to your page.
 
   parser.add_argument('--private_browsing', action='store_true',
                       help='If specified, opens browser in private/incognito mode.')
+                      
+  parser.add_argument('--dump_out_directory', default='dump_out', type=str,
+                      help='If specified, overrides the directory for dump files using emrun_file_dump method.')
 
   parser.add_argument('serve', nargs='?', default='')
 
