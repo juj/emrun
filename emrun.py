@@ -691,12 +691,12 @@ class HTTPHandler(SimpleHTTPRequestHandler):
       # Binary file dump/upload handling. Requests to
       # "stdio.html?file=filename" will write binary data to the given file.
       data = self.rfile.read(int(self.headers['Content-Length']))
-      filename = query[len('file='):]
+      filename = unquote_u(query[len('file='):])
+      filename = os.path.join(emrun_options.dump_out_directory, os.path.normpath(filename))
       try:
-        os.mkdir(emrun_options.dump_out_directory)
+        os.makedirs(os.path.dirname(filename))
       except OSError:
         pass
-      filename = os.path.join(emrun_options.dump_out_directory, os.path.normpath(filename))
       open(filename, 'wb').write(data)
       logi('Wrote ' + str(len(data)) + ' bytes to file "' + filename + '".')
       have_received_messages = True
