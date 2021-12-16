@@ -691,7 +691,7 @@ class HTTPHandler(SimpleHTTPRequestHandler):
       # Binary file dump/upload handling. Requests to
       # "stdio.html?file=filename" will write binary data to the given file.
       data = self.rfile.read(int(self.headers['Content-Length']))
-      filename = unquote_u(query[len('file='):])      
+      filename = unquote_u(query[len('file='):])
       dump_out_directory = 'dump_out'
       try:
         os.mkdir(dump_out_directory)
